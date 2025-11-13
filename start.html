@@ -182,10 +182,13 @@
     if(!grid || !hiddenSelect) return;
     grid.innerHTML = '';
     hiddenSelect.innerHTML = '';
-    if(typeof window === 'undefined' || !window.TalentManager) return;
-    const talents = window.TalentManager.getRegistered();
-    talents.forEach(name => {
-      const info = window.TalentManager.getTalentInfo(name) || {};
+      if (typeof window === 'undefined' || !window.TalentManager) return;
+      const allTalents = window.TalentManager ? window.TalentManager.getRegistered() || [] : [];
+      const filteredTalents = allTalents.filter(talentName => !HIDDEN_TALENTS.includes(talentName));
+
+      // 渲染过滤后的天赋
+      filteredTalents.forEach(talentName => {
+          const info = window.TalentManager.getTalentInfo(name) || {};
       // populate hidden select
       const opt = document.createElement('option'); opt.value = name; opt.textContent = name; hiddenSelect.appendChild(opt);
 

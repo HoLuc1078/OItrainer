@@ -489,138 +489,153 @@
         }
       });
       // 选择导向事件：天才学生自荐
-      this.register({
-        id: 'genius_apply',
-        name: '学生自荐',
-        description: '外省空降学生申请加入',
-        check: c => {
-          if(c.game.reputation < 45) return false;
-          return getRandom() < 0.004;
-        },
-        run: c => {
-          // 计算当前队内学生的最大能力值
-          const activeStudents = c.game.students.filter(s => s && s.active !== false);
-          let maxThinking = 0, maxCoding = 0, maxMental = 0;
-          let maxKnowledgeDs = 0, maxKnowledgeGraph = 0, maxKnowledgeString = 0;
-          let maxKnowledgeMath = 0, maxKnowledgeDp = 0;
-          
-          for(const s of activeStudents){
-            if(!s) continue;
-            maxThinking = Math.max(maxThinking, Number(s.thinking || 0));
-            maxCoding = Math.max(maxCoding, Number(s.coding || 0));
-            maxMental = Math.max(maxMental, Number(s.mental || 0));
-            maxKnowledgeDs = Math.max(maxKnowledgeDs, Number(s.knowledge_ds || 0));
-            maxKnowledgeGraph = Math.max(maxKnowledgeGraph, Number(s.knowledge_graph || 0));
-            maxKnowledgeString = Math.max(maxKnowledgeString, Number(s.knowledge_string || 0));
-            maxKnowledgeMath = Math.max(maxKnowledgeMath, Number(s.knowledge_math || 0));
-            maxKnowledgeDp = Math.max(maxKnowledgeDp, Number(s.knowledge_dp || 0));
-          }
-          
-          // 新学生能力为队内最大值的80%
-          const newThinking = Math.floor(maxThinking * 0.8);
-          const newCoding = Math.floor(maxCoding * 0.8);
-          const newMental = Math.floor(maxMental * 0.8);
-          const newKnowledgeDs = Math.floor(maxKnowledgeDs * 0.8);
-          const newKnowledgeGraph = Math.floor(maxKnowledgeGraph * 0.8);
-          const newKnowledgeString = Math.floor(maxKnowledgeString * 0.8);
-          const newKnowledgeMath = Math.floor(maxKnowledgeMath * 0.8);
-          const newKnowledgeDp = Math.floor(maxKnowledgeDp * 0.8);
-          
-          // 生成随机学生姓名（使用主逻辑中封装好的函数）
-          let provForName = c.game && c.game.province_name ? c.game.province_name : null;
-          if (typeof provForName === 'number' && c.PROVINCES && c.PROVINCES[provForName]) provForName = c.PROVINCES[provForName].name;
-          provForName = (provForName || '') + '';
-          const newStudentName = (typeof window.generateName === 'function') ? window.generateName({ region: provForName }) : '新学生';
-          
-          const options = [
-            { label: '接收', effect: () => {
-                const cost = c.utils.uniformInt(10000, 20000);
-                c.game.recordExpense(cost, '接收转学生');
-                
-                // 创建新学生实例
-                try{
-                  const s = new Student(newStudentName, newThinking, newCoding, newMental);
-                  s.pressure = 30;
-                  s.comfort = 80;
-                  s.active = true;
-                  
-                  // 设置知识点
-                  s.knowledge_ds = newKnowledgeDs;
-                  s.knowledge_graph = newKnowledgeGraph;
-                  s.knowledge_string = newKnowledgeString;
-                  s.knowledge_math = newKnowledgeMath;
-                  s.knowledge_dp = newKnowledgeDp;
-                  
-                  c.game.students.push(s);
-                  
-                  // 自动晋级下场比赛：将学生加入当前赛季所有已有晋级资格的比赛
-                  try{
-                    const halfBoundary = (typeof WEEKS_PER_HALF !== 'undefined') ? WEEKS_PER_HALF : Math.floor((typeof SEASON_WEEKS !== 'undefined' ? SEASON_WEEKS : 26) / 2);
-                    const halfIndex = (c.game.week > halfBoundary) ? 1 : 0;
-                    
-                    if(c.game.qualification && c.game.qualification[halfIndex]){
-                      const compOrder = window.COMPETITION_ORDER || ["CSP-S1","CSP-S2","NOIP","省选","NOI"];
-                      // 找到下一场即将进行的比赛
-                      const futureComps = (window.competitions || []).filter(comp => comp.week > c.game.week);
-                      if(futureComps.length > 0){
-                        const nextComp = futureComps.sort((a, b) => a.week - b.week)[0];
-                        const nextCompIdx = compOrder.indexOf(nextComp.name);
-                        
-                        // 如果不是第一场比赛，需要给前一场比赛的晋级资格
-                        if(nextCompIdx > 0){
-                          const prevComp = compOrder[nextCompIdx - 1];
-                          if(!c.game.qualification[halfIndex][prevComp]){
-                            c.game.qualification[halfIndex][prevComp] = new Set();
-                          }
-                          c.game.qualification[halfIndex][prevComp].add(newStudentName);
-                          console.log(`[学生自荐] ${newStudentName} 自动获得 ${prevComp} 晋级资格，可参加 ${nextComp.name}`);
-                        }
-                      }
-                    }
-                  }catch(e){ console.error('设置晋级资格失败', e); }
-                  
-                }catch(e){
-                  console.error('创建学生失败', e);
-                  // fallback to plain object if Student constructor unavailable
-                  c.game.students.push({ 
-                    name: newStudentName, 
-                    active: true, 
-                    thinking: newThinking, 
-                    coding: newCoding, 
-                    mental: newMental,
-                    pressure: 30, 
-                    comfort: 80,
-                    knowledge_ds: newKnowledgeDs,
-                    knowledge_graph: newKnowledgeGraph,
-                    knowledge_string: newKnowledgeString,
-                    knowledge_math: newKnowledgeMath,
-                    knowledge_dp: newKnowledgeDp
-                  });
-                }
-                
-                const desc = `接收转学生 ${newStudentName}：经费 -¥${cost}，已自动晋级下场比赛`;
-                window.pushEvent && window.pushEvent({ name: '选择结果', description: desc, week: c.game.week });
-                try{ if(typeof window.renderAll === 'function') window.renderAll(); }catch(e){}
-              }
+        this.register({
+            id: 'genius_apply',
+            name: '学生自荐',
+            description: '外省空降学生申请加入',
+            check: c => {
+                if (c.game.DEBUG_QENIUS_APPLY) { c.game.DEBUG_QENIUS_APPLY = false; return true; }
+                if (c.game.reputation < 45) return false;
+                return getRandom() < (0.004 + Math.max(0, c.game.reputation - 50) * 0.0005);
             },
-            { label: '拒绝', effect: () => {
-                const desc = `拒绝转学生 ${newStudentName}：暂无即时影响`;
-                window.pushEvent && window.pushEvent({ name: '选择结果', description: desc, week: c.game.week });
-              }
-            }
-          ];
+            run: c => {
+                // 计算当前队内学生的最大能力值
+                const activeStudents = c.game.students.filter(s => s && s.active !== false);
+                let maxThinking = 0, maxCoding = 0, maxMental = 0;
+                let maxKnowledgeDs = 0, maxKnowledgeGraph = 0, maxKnowledgeString = 0;
+                let maxKnowledgeMath = 0, maxKnowledgeDp = 0;
 
-          const abilityDesc = `思维:${newThinking} 编码:${newCoding} 心理:${newMental}`;
-          window.showChoiceModal && window.showChoiceModal({ 
-            name: '学生自荐', 
-            description: `外省转学生 ${newStudentName} 希望加入队伍，是否接收？`, 
-            week: c.game.week, 
-            options 
-          });
-          return null;
-        }
-      });
-      // 选择导向事件：媒体采访请求
+                for (const s of activeStudents) {
+                    if (!s) continue;
+                    maxThinking = Math.max(maxThinking, Number(s.thinking || 0));
+                    maxCoding = Math.max(maxCoding, Number(s.coding || 0));
+                    maxMental = Math.max(maxMental, Number(s.mental || 0));
+                    maxKnowledgeDs = Math.max(maxKnowledgeDs, Number(s.knowledge_ds || 0));
+                    maxKnowledgeGraph = Math.max(maxKnowledgeGraph, Number(s.knowledge_graph || 0));
+                    maxKnowledgeString = Math.max(maxKnowledgeString, Number(s.knowledge_string || 0));
+                    maxKnowledgeMath = Math.max(maxKnowledgeMath, Number(s.knowledge_math || 0));
+                    maxKnowledgeDp = Math.max(maxKnowledgeDp, Number(s.knowledge_dp || 0));
+                }
+
+                // 生成随机学生姓名（使用主逻辑中封装好的函数）
+                let provForName = c.game && c.game.province_name ? c.game.province_name : null;
+                if (typeof provForName === 'number' && c.PROVINCES && c.PROVINCES[provForName]) provForName = c.PROVINCES[provForName].name;
+                provForName = (provForName || '') + '';
+
+                // 获取当前所有学生的名字列表以避免重名
+                const existingNames = c.game.students.map(s => s.name);
+                let newStudentName;
+                if (getRandom() < 0.01 && !c.game.hasChtholly) { c.game.hasChtholly = true; newStudentName = "珂朵莉"; } else
+                    if (typeof window.generateUniqueName === 'function') {
+                        newStudentName = window.generateUniqueName({ region: provForName, existingNames: existingNames });
+                    } else if (typeof window.generateName === 'function') {
+                        newStudentName = window.generateName({ region: provForName });
+                    } else {
+                        newStudentName = '新学生';
+                    }
+
+                // 新学生能力为队内最大值的80%
+                const newThinking = newStudentName == "珂朵莉" ? 2147483647 : Math.min(10000, Math.floor(maxThinking * (0.8 + Math.max(0, c.game.reputation - 50) * 0.005) + getRandom() * 50));
+                const newCoding = newStudentName == "珂朵莉" ? 2147483647 : Math.min(10000, Math.floor(maxCoding * (0.8 + Math.max(0, c.game.reputation - 50) * 0.005) + getRandom() * 50));
+                const newMental = newStudentName == "珂朵莉" ? 2147483647 : Math.min(10000, Math.floor(maxMental * (0.8 + Math.max(0, c.game.reputation - 50) * 0.005) + getRandom() * 50));
+                const newKnowledgeDs = newStudentName == "珂朵莉" ? 2147483647 : Math.min(10000, Math.floor(maxKnowledgeDs * (0.8 + Math.max(0, c.game.reputation - 50) * 0.005) + getRandom() * 50));
+                const newKnowledgeGraph = newStudentName == "珂朵莉" ? 2147483647 : Math.min(10000, Math.floor(maxKnowledgeGraph * (0.8 + Math.max(0, c.game.reputation - 50) * 0.005) + getRandom() * 50));
+                const newKnowledgeString = newStudentName == "珂朵莉" ? 2147483647 : Math.min(10000, Math.floor(maxKnowledgeString * (0.8 + Math.max(0, c.game.reputation - 50) * 0.005) + getRandom() * 50));
+                const newKnowledgeMath = newStudentName == "珂朵莉" ? 2147483647 : Math.min(10000, Math.floor(maxKnowledgeMath * (0.8 + Math.max(0, c.game.reputation - 50) * 0.005) + getRandom() * 50));
+                const newKnowledgeDp = newStudentName == "珂朵莉" ? 2147483647 : Math.min(10000, Math.floor(maxKnowledgeDp * (0.8 + Math.max(0, c.game.reputation - 50) * 0.005) + getRandom() * 50));
+
+                const options = [
+                    {
+                        label: '接收', effect: () => {
+                            const cost = c.utils.uniformInt(10000, 20000);
+                            c.game.recordExpense(cost, '接收转学生');
+
+                            // 创建新学生实例
+                            try {
+                                const s = new Student(newStudentName, newThinking, newCoding, newMental);
+                                s.pressure = 10;
+                                s.comfort = 80;
+                                s.active = true;
+
+                                // 设置知识点
+                                s.knowledge_ds = newKnowledgeDs;
+                                s.knowledge_graph = newKnowledgeGraph;
+                                s.knowledge_string = newKnowledgeString;
+                                s.knowledge_math = newKnowledgeMath;
+                                s.knowledge_dp = newKnowledgeDp;
+                                if (newStudentName == "珂朵莉") s.talents.add("世界上最幸福的女孩")
+
+                                c.game.students.push(s);
+
+                                // 自动晋级下场比赛：将学生加入当前赛季所有已有晋级资格的比赛
+                                try {
+                                    const halfBoundary = (typeof WEEKS_PER_HALF !== 'undefined') ? WEEKS_PER_HALF : Math.floor((typeof SEASON_WEEKS !== 'undefined' ? SEASON_WEEKS : 26) / 2);
+                                    const halfIndex = (c.game.week > halfBoundary) ? 1 : 0;
+
+                                    if (c.game.qualification && c.game.qualification[halfIndex]) {
+                                        const compOrder = window.COMPETITION_ORDER || ["CSP-S1", "CSP-S2", "NOIP", "省选", "NOI"];
+                                        // 找到下一场即将进行的比赛
+                                        const futureComps = (window.competitions || []).filter(comp => comp.week > c.game.week);
+                                        if (futureComps.length > 0) {
+                                            const nextComp = futureComps.sort((a, b) => a.week - b.week)[0];
+                                            const nextCompIdx = compOrder.indexOf(nextComp.name);
+
+                                            // 如果不是第一场比赛，需要给前一场比赛的晋级资格
+                                            if (nextCompIdx > 0) {
+                                                const prevComp = compOrder[nextCompIdx - 1];
+                                                if (!c.game.qualification[halfIndex][prevComp]) {
+                                                    c.game.qualification[halfIndex][prevComp] = new Set();
+                                                }
+                                                c.game.qualification[halfIndex][prevComp].add(newStudentName);
+                                                console.log(`[学生自荐] ${newStudentName} 自动获得 ${prevComp} 晋级资格，可参加 ${nextComp.name}`);
+                                            }
+                                        }
+                                    }
+                                } catch (e) { console.error('设置晋级资格失败', e); }
+
+                            } catch (e) {
+                                console.error('创建学生失败', e);
+                                // fallback to plain object if Student constructor unavailable
+                                c.game.students.push({
+                                    name: newStudentName,
+                                    active: true,
+                                    thinking: newThinking,
+                                    coding: newCoding,
+                                    mental: newMental,
+                                    pressure: 30,
+                                    comfort: 80,
+                                    knowledge_ds: newKnowledgeDs,
+                                    knowledge_graph: newKnowledgeGraph,
+                                    knowledge_string: newKnowledgeString,
+                                    knowledge_math: newKnowledgeMath,
+                                    knowledge_dp: newKnowledgeDp
+                                });
+                            }
+
+                            const desc = `接收转学生 ${newStudentName}：经费 -¥${cost}，已自动晋级下场比赛`;
+                            window.pushEvent && window.pushEvent({ name: '选择结果', description: desc, week: c.game.week });
+                            try { if (typeof window.renderAll === 'function') window.renderAll(); } catch (e) { }
+                        }
+                    },
+                    {
+                        label: '拒绝', effect: () => {
+                            c.game.reputation = Math.max(0, c.game.reputation - 20);
+                            const desc = `拒绝转学生 ${newStudentName}：声誉-20`;
+                            window.pushEvent && window.pushEvent({ name: '选择结果', description: desc, week: c.game.week });
+                        }
+                    }
+                ];
+
+                const abilityDesc = `思维:${newThinking} 编码:${newCoding} 心理:${newMental}`;
+                window.showChoiceModal && window.showChoiceModal({
+                    name: '学生自荐',
+                    description: `外省转学生 ${newStudentName} 希望加入队伍，是否接收？`,
+                    week: c.game.week,
+                    options
+                });
+                return null;
+            }
+        });      // 选择导向事件：媒体采访请求
       this.register({
         id: 'media_interview',
         name: '媒体采访请求',

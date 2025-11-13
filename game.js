@@ -795,6 +795,155 @@ function outingTrainingWithSelection(difficulty_choice, province_choice, selecte
   if(__before && __after) __summarizeSnapshot(__before, __after, `外出集训：${target.name} 难度${difficulty_choice}`);
 }
 
+function overseasTrainingWithSelection(difficulty_choice, country_choice, selectedNames, inspireTalents) {
+    const target = COUNTRIES[country_choice];
+    const __before = typeof __createSnapshot === 'function' ? __createSnapshot() : null;
+    const selectedStudents = game.students.filter(s => s && s.active && selectedNames.includes(s.name));
+    const participantCount = selectedStudents.length;
+    // 出境集训基础费用是国内的1.5倍
+    let final_cost = computeOutingCostQuadratic(difficulty_choice, country_choice, participantCount) * 1.5;
+
+    inspireTalents = inspireTalents || [];
+    // 隐藏天赋激发费用更高（20000/个）
+    const talentInspireCost = inspireTalents.length * 20000;
+    final_cost += talentInspireCost;
+
+    try {
+        let totalReduction = 0;
+        const reductions = [];
+        for (let s of selectedStudents) {
+            try {
+                let results = null;
+                if (s && typeof s.triggerTalents === 'function') {
+                    results = s.triggerTalents('overseas_cost_calculate', { country: target.name, difficulty: difficulty_choice, participantCount });
+                } else if (typeof window !== 'undefined' && window.TalentManager && typeof window.TalentManager.handleStudentEvent === 'function') {
+                    results = window.TalentManager.handleStudentEvent(s, 'overseas_cost_calculate', { country: target.name, difficulty: difficulty_choice, participantCount });
+                }
+                if (Array.isArray(results)) {
+                    for (const r of results) {
+                        const res = r && r.result ? r.result : r;
+                        if (res && res.action === 'reduce_overseas_cost' && typeof res.amount === 'number') {
+                            totalReduction += Number(res.amount) || 0;
+                            reductions.push({ student: s.name, amount: Number(res.amount), message: res.message });
+                        }
+                    }
+                }
+            } catch (e) { console.error('overseas cost talent check error for', s && s.name, e); }
+        }
+        if (totalReduction > 0) {
+            const applied = Math.min(final_cost, Math.floor(totalReduction));
+            final_cost = Math.max(0, final_cost - applied);
+            try { if (window.pushEvent) window.pushEvent({ name: '出境集训经费减免', description: `天赋导致出境集训费用减少 ¥${applied}（来自: ${reductions.map(r => r.student + ':' + '¥' + r.amount).join(', ')}）`, week: game.week }); } catch (e) { }
+            log(`出境集训经费减免：共 -¥${applied}（明细: ${reductions.map(r => r.student + ':' + '¥' + r.amount).join(', ')})`);
+        }
+    } catch (e) { console.error('collect overseas cost reductions error', e); }
+
+    if (game.budget < final_cost) { alert("经费不足，无法出境集训！"); return; }
+    game.recordExpense(final_cost, `出境集训：${target.name}`);
+    log(`出境集训：${target.name} (${target.type})，难度:${difficulty_choice}，参与人数:${participantCount}，费用 ¥${final_cost}`);
+
+    const DIFFIDX_MAP = { 1: 0, 2: 1, 3: 4 };
+    const diffIdxForHidden = DIFFIDX_MAP[difficulty_choice] || 0;
+
+
+    for (let s of selectedStudents) {
+        let hiddenScore = simulateHiddenMockScore(s, diffIdxForHidden);
+
+        // 出境集训效果更好（基础值提高20%）
+        let knowledge_base = (difficulty_choice === 2) ? OUTFIT_KNOWLEDGE_BASE_INTERMEDIATE : (difficulty_choice === 3) ? OUTFIT_KNOWLEDGE_BASE_ADVANCED : OUTFIT_KNOWLEDGE_BASE_BASIC;
+        knowledge_base *= 1.2;
+
+        let ability_base = (difficulty_choice === 2) ? OUTFIT_ABILITY_BASE_INTERMEDIATE : (difficulty_choice === 3) ? OUTFIT_ABILITY_BASE_ADVANCED : OUTFIT_ABILITY_BASE_BASIC;
+        ability_base *= 1.2;
+
+        let pressure_gain = (difficulty_choice === 2) ? OUTFIT_PRESSURE_INTERMEDIATE : (difficulty_choice === 3) ? OUTFIT_PRESSURE_ADVANCED : OUTFIT_PRESSURE_BASIC;
+
+        let knowledge_mult = target.trainingQuality || 1.0;
+        let ability_mult = target.trainingQuality || 1.0;
+
+        const DIFF_GAIN_PENALTY = { 1: 1.0, 2: 1.0, 3: 1.0 };
+
+        let knowledge_min = Math.floor(knowledge_base * knowledge_mult);
+        let knowledge_max = Math.floor(knowledge_base * knowledge_mult * 1.8);
+        let ability_min = ability_base * ability_mult;
+        let ability_max = ability_base * ability_mult * 2.0;
+
+        let scoreThreshold = 200;
+        let mismatch = (hiddenScore < scoreThreshold);
+
+        let knowledge_modifier = 1.0;
+        let ability_modifier = 1.0;
+        let pressure_multiplier = 1.0;
+        if (mismatch) {
+            knowledge_modifier = 0.2;
+            ability_modifier = 0.5;
+            pressure_multiplier = 2.0;
+        }
+
+        const outfitEffectMult = (typeof OUTFIT_EFFECT_MULTIPLIER !== 'undefined' ? OUTFIT_EFFECT_MULTIPLIER : 1.0);
+        const knowledge_gain = Math.floor(uniformInt(knowledge_min, knowledge_max) * knowledge_modifier * outfitEffectMult);
+        s.knowledge_ds += knowledge_gain;
+        s.knowledge_graph += knowledge_gain;
+        s.knowledge_string += knowledge_gain;
+        s.knowledge_math += knowledge_gain;
+        s.knowledge_dp += knowledge_gain;
+
+
+        const ability_gain = uniform(ability_min, ability_max) * ability_modifier * outfitEffectMult;
+        s.thinking = (s.thinking || 0) + ability_gain;
+        s.coding = (s.coding || 0) + ability_gain;
+        s.mental = Math.min(100, s.mental + ability_gain * 0.5);
+
+        const pressure_delta = Math.floor(pressure_gain * (mismatch ? pressure_multiplier : 1.0) * (typeof PRESSURE_INCREASE_MULTIPLIER !== 'undefined' ? PRESSURE_INCREASE_MULTIPLIER : 1.0));
+        s.pressure = Math.min(100, Number(s.pressure || 0) + pressure_delta);
+        s.comfort -= 10;
+
+        s.triggerTalents?.('pressure_change', { source: 'overseas', amount: pressure_delta, country: target?.name, difficulty_choice });
+        s.triggerTalents?.('overseas_finished', { country: target?.name, difficulty: difficulty_choice, knowledge_gain });
+        s.hiddenMockScore = hiddenScore;
+
+        try {
+            if (typeof window !== 'undefined' && window.TalentManager && typeof window.TalentManager.tryAcquireTalent === 'function') {
+                try { window.TalentManager.tryAcquireTalent(s, 1.0); } catch (e) { }
+            }
+        } catch (e) { console.error('overseas_finished tryAcquireTalent error', e); }
+
+        if (inspireTalents && inspireTalents.length > 0) {
+            for (const talentName of inspireTalents) {
+                // 隐藏天赋的激发概率略高（35%）
+                const probability = HIDDEN_TALENTS.includes(talentName) ? 0.35 : 0.3;
+                if (Math.random() < probability) {
+                    if (!s.talents.has(talentName)) {
+                        s.talents.add(talentName);
+
+                        pushEvent({
+                            name: '天赋激发成功',
+                            description: `${s.name} 在出境集训中获得了天赋「${talentName}」！`,
+                            week: game.week
+                        });
+                        log(`${s.name} 激发了天赋：${talentName}`);
+                    }
+                }
+            }
+        }
+
+        if (mismatch) {
+            const message = `这次集训与学生${s.name}实力不匹配，压力增加，收获减少`;
+            pushEvent({ name: '集训不匹配', description: message, week: game.week });
+        }
+    }
+
+    if (talentInspireCost > 0) {
+        log(`天赋激发费用：¥${talentInspireCost}（${inspireTalents.length}个天赋 × ¥20,000）`);
+    }
+
+    game.weeks_since_entertainment += 1;
+    log("出境集训完成（1周）。");
+
+    const __after = __createSnapshot?.();
+    if (__before && __after) __summarizeSnapshot(__before, __after, `出境集训：${target.name} 难度${difficulty_choice}`);
+}
+
 const KP_OPTIONS = [{id:1,name:"数据结构"},{id:2,name:"图论"},{id:3,name:"字符串"},{id:4,name:"数学"},{id:5,name:"动态规划"}];
 
 function checkRandomEvents(){
