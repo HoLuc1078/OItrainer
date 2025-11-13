@@ -843,6 +843,47 @@
           }catch(e){ console.error('poaching_offer run error', e); return null; }
         }
       });
+
+        // 模拟赛大样例出锅
+        this.register({
+            id: 'mock_contest_sample_error',
+            name: '模拟赛大样例出锅',
+            description: '模拟赛大样例放成测试数据，导致学生压力增加',
+            check: c => {
+                // 检查是否刚结束模拟赛（依赖模拟赛结束时设置的标志）
+                // 需在模拟赛结束逻辑中添加：game.lastMockContestFinishedWeek = game.week
+                if (!c.game || typeof c.game.lastMockContestFinishedWeek !== 'number') return false;
+                // 仅在模拟赛结束的当周触发
+                if (c.game.lastMockContestFinishedWeek !== c.game.week) return false;
+                // 20% 触发概率
+                return getRandom() < 1.0;
+            },
+            run: c => {
+                for (const s of c.game.students) {
+                    if (!s || s.active === false) continue;
+                    // 增加压力（使用 modifier 保持与其他事件一致性）
+                    s.pressure_modifier = (s.pressure_modifier || 0) + 25;
+                    // 触发天赋系统的压力变化事件
+                    try {
+                        if (typeof s.triggerTalents === 'function') {
+                            s.triggerTalents('pressure_change', { source: 'mock_sample_error', amount: 25 });
+                        }
+                    } catch (e) {
+                        console.error('triggerTalents pressure_change error:', e);
+                    }
+                }
+                const msg = '模拟赛大样例放成测试数据，导致被迫换题，全体学生压力 +25';
+                c.log && c.log(`[模拟赛大样例出锅] ${msg}`);
+                window.pushEvent && window.pushEvent({
+                    name: '模拟赛大样例出锅',
+                    description: msg,
+                    week: c.game.week
+                });
+                // 清除标志避免重复触发
+                c.game.lastMockContestFinishedWeek = null;
+                return null;
+            }
+        });
         // 在events.js的registerDefaultEvents函数中添加以下事件注册
 
         // 语言不通
@@ -851,16 +892,30 @@
             name: '语言障碍',
             description: '出境集训时因语言不通导致学习效率下降',
             check: c => {
-                // 检查是否有学生正在进行出境集训（通过最近活动记录判断）
-                const lastActivity = c.game.activityLog?.[c.game.activityLog.length - 1];
-                if (!lastActivity || !lastActivity.includes('出境集训')) return false;
+                // 方法1：检查最近的活动日志
+                if (c.game.activityLog && c.game.activityLog.length > 0) {
+                    const lastActivity = c.game.activityLog[c.game.activityLog.length - 1];
+                    if (lastActivity && lastActivity.includes('境外集训')) {
+                        console.log(`[DEBUG] 发现境外集训活动: ${lastActivity}`);
+                        const nonEnglishCountries = ['日本', '韩国', '德国', '法国', '俄罗斯'];
+                        const targetCountry = lastActivity.match(/境外集训：(.+?) /)?.[1];
+                        const baseProb = nonEnglishCountries.includes(targetCountry) ? 0.3 : 0.1;
+                        return c.utils.uniform() < baseProb;
+                    }
+                }
 
-                // 非英语国家概率更高
-                const nonEnglishCountries = ['日本', '韩国', '德国', '法国', '俄罗斯'];
-                const targetCountry = lastActivity.match(/出境集训：(.+?) /)?.[1];
-                const baseProb = nonEnglishCountries.includes(targetCountry) ? 0.3 : 0.1;
+                // 方法2：检查专门的境外活动记录
+                if (c.game.overseasActivities && c.game.overseasActivities.length > 0) {
+                    const lastOverseas = c.game.overseasActivities[c.game.overseasActivities.length - 1];
+                    if (lastOverseas && lastOverseas.week === c.game.week) {
+                        console.log(`[DEBUG] 发现本周境外活动: ${lastOverseas.country}`);
+                        const nonEnglishCountries = ['日本', '韩国', '德国', '法国', '俄罗斯'];
+                        const baseProb = nonEnglishCountries.includes(lastOverseas.country) ? 0.3 : 0.1;
+                        return c.utils.uniform() < baseProb;
+                    }
+                }
 
-                return getRandom() < baseProb;
+                return false;
             },
             run: c => {
                 const affectedStudents = c.game.students.filter(s => s.active);
@@ -961,7 +1016,7 @@
                 if (targetCountry !== '泰国') return false;
 
                 // 触发概率：20%
-                return getRandom() < 0.2;
+                return getRandom() < 0.5;
             },
             run: c => {
                 // 随机选择1名活跃学生触发（或所有学生，根据设计需求调整）

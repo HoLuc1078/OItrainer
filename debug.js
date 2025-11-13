@@ -135,6 +135,8 @@ function addSuperStudent() {
         "摸鱼大师",       // 训练强度>80时50%概率取消压力增加
         "抗压奇才",       // 压力增加超10时减半
         "睡觉也在想题",   // 放假结束随机提升知识点+压力-5
+        "嬲选手",
+        "珂朵莉"
     ];
     positiveTalents.forEach(talent => superStudent.addTalent(talent));
 

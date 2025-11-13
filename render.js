@@ -475,7 +475,12 @@ function renderAll(){
 
             // 新增：针对“珂朵莉”天赋的渐变色处理
             let style = '';
-            if (talentName === '珂朵莉') {
+            if (talentName === '世界上最幸福的女孩') {
+                style = `background: linear-gradient(90deg, #ff000020, #0000ff20); /* 红蓝渐变背景（透明） */
+             color: #c0392b; /* 深红色文本 */
+             border-color: #ff000040 #0000ff40 #0000ff40 #ff000040; /* 边框红蓝渐变 */`;
+            }
+            else if (talentName === '珂朵莉') {
                 // 红蓝渐变背景（透明效果，与现有标签的透明度保持一致）
                 // 边框使用渐变两侧的颜色，带透明度（后缀 40 对应原样式的 alpha 值）
                 style = `background: linear-gradient(90deg, #ff000020, #0000ff20); 
@@ -2284,7 +2289,7 @@ function initExtraTrainButton() {
 
                     // 获取当前活跃学生列表及压力值
                     const activeStudents = window.game.students.filter(s => s && s.active !== false);
-
+                    
                     // 生成学生压力展示HTML
                     let studentsPressureHtml = '<div class="students-pressure" style="margin:12px 0;max-height:200px;overflow:auto;padding:8px;border:1px solid #eee;border-radius:4px;">';
                     if (activeStudents.length === 0) {
@@ -2296,7 +2301,7 @@ function initExtraTrainButton() {
                             // 压力等级样式（参考render.js中的划分）
                             let pressureClass = pressure < 35 ? 'pressure-low' : pressure < 65 ? 'pressure-mid' : 'pressure-high';
                             let pressureLevel = pressure < 35 ? '低' : pressure < 65 ? '中' : '高';
-
+                            
                             studentsPressureHtml += `
                                 <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed #f0f0f0;">
                                     <span>${s.name}</span>

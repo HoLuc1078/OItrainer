@@ -798,6 +798,21 @@ function outingTrainingWithSelection(difficulty_choice, province_choice, selecte
 function overseasTrainingWithSelection(difficulty_choice, country_choice, selectedNames, inspireTalents) {
     const target = COUNTRIES[country_choice];
     const __before = typeof __createSnapshot === 'function' ? __createSnapshot() : null;
+
+    // 详细记录境外集训活动 - 修复事件触发问题
+    if (!game.overseasActivities) game.overseasActivities = [];
+    game.overseasActivities.push({
+        country: target.name,
+        difficulty: difficulty_choice,
+        week: game.week,
+        participants: selectedNames.length
+    });
+
+    // 同时记录到常规活动日志
+    if (!game.activityLog) game.activityLog = [];
+    game.activityLog.push(`境外集训：${target.name} 难度${difficulty_choice} 周${game.week}`);
+
+    console.log(`[DEBUG] 记录境外集训活动: ${target.name}, 难度${difficulty_choice}, 周${game.week}`);
     const selectedStudents = game.students.filter(s => s && s.active && selectedNames.includes(s.name));
     const participantCount = selectedStudents.length;
     // 出境集训基础费用是国内的1.5倍
@@ -942,6 +957,67 @@ function overseasTrainingWithSelection(difficulty_choice, country_choice, select
 
     const __after = __createSnapshot?.();
     if (__before && __after) __summarizeSnapshot(__before, __after, `出境集训：${target.name} 难度${difficulty_choice}`);
+    // 最简单的事件触发 - 直接根据概率触发
+    if (Math.random() < 1.0) {
+        const eventTypes = ['语言障碍', '文化冲击', '学术交流'];
+        const selectedEvent = eventTypes[Math.floor(Math.random() * eventTypes.length)];
+
+        let description = '';
+        switch (selectedEvent) {
+            case '语言障碍':
+                description = `在${target.name}集训时语言不通导致学习效率下降`;
+                break;
+            case '文化冲击':
+                description = `学生因文化差异出现适应问题，舒适度下降`;
+                break;
+            case '学术交流':
+                description = `与当地学生进行学术交流，能力有所提升`;
+                break;
+        }
+
+        pushEvent({
+            name: selectedEvent,
+            description: description,
+            week: game.week
+        });
+    }
+
+    // 泰国特殊事件
+    if (target.name === '泰国' && Math.random() < 0.5) {
+        const participants = game.students.filter(s => s.active && selectedNames.includes(s.name));
+        if (participants.length > 0) {
+            const targetStudent = participants[Math.floor(Math.random() * participants.length)];
+            targetStudent.femaleTeamPath = true;
+            pushEvent({
+                name: '女队道路',
+                description: `${targetStudent.name}在泰国集训期间受到启发，走上女队发展道路`,
+                week: game.week
+            });
+        }
+    }
+
+    // 原有的事件检查
+    try { checkRandomEvents(); } catch (e) { console.error('post-overseas-training checkRandomEvents failed', e); }
+
+    // 强制检查事件 - 修复境外集训不触发事件的问题
+    console.log(`[DEBUG] 境外集训完成，开始检查事件...`);
+    try {
+        checkRandomEvents();
+        console.log(`[DEBUG] 事件检查完成`);
+    } catch (e) {
+        console.error('post-overseas-training checkRandomEvents failed', e);
+    }
+
+    // 额外触发一次事件管理器检查
+    if (window.EventManager && typeof window.EventManager.checkRandomEvents === 'function') {
+        try {
+            window.EventManager.checkRandomEvents(game);
+            console.log(`[DEBUG] EventManager.checkRandomEvents 调用完成`);
+        } catch (e) {
+            console.error('EventManager.checkRandomEvents failed', e);
+        }
+    }
+    safeWeeklyUpdate(1);
 }
 
 const KP_OPTIONS = [{id:1,name:"数据结构"},{id:2,name:"图论"},{id:3,name:"字符串"},{id:4,name:"数学"},{id:5,name:"动态规划"}];
