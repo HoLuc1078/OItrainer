@@ -26,7 +26,9 @@
 
 ## 🎮 游玩方式
 
-[访问 https://holuc1078.github.io/OItrainer/ 即可](https://holuc1078.github.io/OItrainer/)
+访问 [https://holuc1078.github.io/OItrainer/](https://holuc1078.github.io/OItrainer/)  即可
+
+或者可以下载文件到本地，打开 `index.html`。
 
 ---
 
