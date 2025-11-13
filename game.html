@@ -212,29 +212,68 @@
 <script src="render.js"></script>
 <script src="debug.js"></script>
 <script>
-(function() {
-  const input = document.getElementById('coach-speech-input');
-  if (!input) return;
+    // 在 game.html 中找到以下原有代码块
+    (function () {
+        const input = document.getElementById('coach-speech-input');
+        if (!input) return;
 
-  input.addEventListener('keydown', function(event) {
-    if (event.key === 'Enter' || event.keyCode === 13) {
-      event.preventDefault();
-      const speechText = (input.value || '').trim();
-      if (!speechText) return;
+        // 在 game.html 中找到训话输入处理的 keydown 事件函数
+        input.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter' || event.keyCode === 13) {
+                event.preventDefault();
+                const speechText = (input.value || '').trim();
+                if (!speechText) return;
 
-      // 触发训话事件
-      const hash = CryptoJS.SHA256(speechText).toString(CryptoJS.enc.Hex);
-      document.dispatchEvent(new CustomEvent('coach-speech', {
-        detail: {
-          text: speechText,
-          hash: hash
-        }
-      }));
-      
-      input.value = '';
-    }
-  });
-})();
+                // 检测以 '/' 开头的调试指令（执行代码）
+                if (speechText.startsWith('/')) {
+                    // 提取指令内容（去除开头的 '/'）
+                    const debugCommand = speechText.slice(1);
+                    const logElement = document.getElementById('log');
+                    let result, error;
+
+                    // 执行代码并捕获结果/错误
+                    try {
+                        // 使用 eval 执行代码，作用域为全局（可直接访问 game 等全局对象）
+                        result = eval(debugCommand);
+                    } catch (e) {
+                        error = e.message; // 捕获执行错误
+                    }
+
+                    // 1. 输出到浏览器控制台
+                    if (error) {
+                        console.error(`[调试指令执行失败] ${debugCommand}\n错误：${error}`);
+                    } else {
+                        console.log(`[调试指令执行成功] ${debugCommand}`, result || '（无返回值）');
+                    }
+
+                    // 2. 输出到训话日志（#log 元素）
+                    if (logElement) {
+                        const logEntry = document.createElement('div');
+                        // 错误用红色，成功用灰色区分
+                        logEntry.style.color = error ? '#dc3545' : '#666';
+                        // 显示指令、结果/错误和时间
+                        logEntry.innerHTML = `[调试] ${new Date().toLocaleTimeString()}：
+          <code>${debugCommand}</code>
+          ${error ? `<span>❌ [调试]错误：${error}</span>` : `<span>✅ [调试]成功 ${result !== undefined ? `，终端返回值为：${result}` : ''}</span>`}
+        `;
+                        logElement.appendChild(logEntry);
+                        logElement.scrollTop = logElement.scrollHeight; // 自动滚动到最新日志
+                    }
+
+                    // 清空输入框
+                    input.value = '';
+                    return; // 跳过原训话逻辑
+                }
+
+                // 原有训话逻辑（非调试指令时执行）
+                const hash = CryptoJS.SHA256(speechText).toString(CryptoJS.enc.Hex);
+                document.dispatchEvent(new CustomEvent('coach-speech', {
+                    detail: { text: speechText, hash: hash }
+                }));
+                input.value = '';
+            }
+        });
+    })();
 </script>
 <script>
   // If game.html is opened directly and there's no save in localStorage and
