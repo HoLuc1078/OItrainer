@@ -441,6 +441,161 @@ function trainStudentsWithTask(task, intensity) {
   try{ checkRandomEvents(); }catch(e){ console.error('post-training checkRandomEvents failed', e); }
 }
 
+// 加训函数（不消耗行动值，压力增加50%）
+function extraTrainStudentsWithTask(task, intensity) {
+    log(`开始加训：${task.name}（难度${task.difficulty}，强度${intensity === 1 ? '轻' : intensity === 2 ? '中' : '重'}）`);
+    const __before = typeof __createSnapshot === 'function' ? __createSnapshot() : null;
+
+    let weather_factor = game.getWeatherFactor();
+    let comfort = game.getComfort();
+    let comfort_factor = 1.0 + Math.max(0.0, (50 - comfort) / 100.0);
+
+    const trainingResults = [];
+
+    for (let s of game.students) {
+        if (!s || s.active === false) continue;
+
+        let personalComfort = comfort;
+
+        if (s.talents && s.talents.has('天气敏感')) {
+            const baseComfort = game.base_comfort;
+            const weatherEffect = comfort - baseComfort;
+            personalComfort = baseComfort + weatherEffect * 2;
+            personalComfort = Math.max(0, Math.min(100, personalComfort));
+        }
+
+        if (s.talents && s.talents.has('美食家')) {
+            const canteenBonus = 3 * (game.facilities.canteen - 1);
+            personalComfort += canteenBonus;
+            personalComfort = Math.max(0, Math.min(100, personalComfort));
+        }
+
+        s.comfort = personalComfort;
+
+        let sick_penalty = (s.sick_weeks > 0) ? 0.7 : 1.0;
+
+        const studentAbility = (s.thinking + s.coding) / 2.0;
+
+        const boostMultiplier = calculateBoostMultiplier(studentAbility, task.difficulty);
+
+        const results = applyTaskBoosts(s, task);
+
+        const libraryLevel = game.facilities.library;
+        let libraryBonus = 0;
+
+        if (libraryLevel === 1) libraryBonus = -0.20;
+        else if (libraryLevel === 2) libraryBonus = -0.05;
+        else if (libraryLevel === 3) libraryBonus = 0.10;
+        else if (libraryLevel === 4) libraryBonus = 0.12;
+        else if (libraryLevel === 5) libraryBonus = 0.14;
+
+        const libraryMultiplier = 1.0 + libraryBonus;
+
+        const intensityFactor = intensity === 1 ? 0.7 : intensity === 3 ? 1.3 : 1.0;
+
+        // 应用知识点增加：基础效率加成 + 图书馆加成 + 强度系数 + 生病惩罚
+        for (const boost of results.boosts) {
+            // 计算总的知识点增加（包含所有加成因素）
+            const totalBoost = Math.floor(boost.actualAmount * libraryMultiplier * intensityFactor * sick_penalty);
+            s.addKnowledge(boost.type, totalBoost);
+            // 更新 actualAmount 为实际增加量，以便日志正确显示
+            boost.actualAmount = totalBoost;
+        }
+
+        const computerLevel = game.facilities.computer;
+        let computerBonus = 0;
+        if (computerLevel === 1) computerBonus = -0.2;
+        else if (computerLevel === 2) computerBonus = 0;
+        else if (computerLevel === 3) computerBonus = 0.1;
+        else if (computerLevel === 4) computerBonus = 0.2;
+        else if (computerLevel === 5) computerBonus = 0.3;
+
+        const computerMultiplier = 1.0 + computerBonus;
+
+        const abilityGainBase = boostMultiplier * intensityFactor * (1 - Math.min(0.6, s.pressure / 200.0));
+        const thinkingGain = uniform(0.6, 1.5) * abilityGainBase * computerMultiplier * (typeof TRAINING_EFFECT_MULTIPLIER !== 'undefined' ? TRAINING_EFFECT_MULTIPLIER : 1.0);
+
+        const codingGain = uniform(1, 2.5) * abilityGainBase * computerMultiplier * (typeof TRAINING_EFFECT_MULTIPLIER !== 'undefined' ? TRAINING_EFFECT_MULTIPLIER : 1.0);
+
+        s.thinking += thinkingGain;
+        s.coding += codingGain;
+        s.thinking = (s.thinking || 0);
+        s.coding = (s.coding || 0);
+
+        let base_pressure = (intensity === 1) ? 15 : (intensity === 2) ? 25 : 40;
+
+        const difficultyPressure = Math.max(0, (task.difficulty - studentAbility) * 0.2);
+        base_pressure += difficultyPressure;
+
+        if (intensity === 3) base_pressure *= TRAINING_PRESSURE_MULTIPLIER_HEAVY;
+        else if (intensity === 2) base_pressure *= TRAINING_PRESSURE_MULTIPLIER_MEDIUM;
+
+        let canteen_reduction = game.facilities.getCanteenPressureReduction();
+        let pressure_increase = base_pressure * weather_factor * canteen_reduction * comfort_factor;
+        if (s.sick_weeks > 0) pressure_increase += 10;
+
+        pressure_increase *= (typeof PRESSURE_INCREASE_MULTIPLIER !== 'undefined' ? PRESSURE_INCREASE_MULTIPLIER : 1.0);
+        // 加训特殊处理：压力增加50%
+        pressure_increase *= 1.5;
+
+        let finalPressureIncrease = pressure_increase;
+        try {
+            if (typeof s.triggerTalents === 'function') {
+                const talentResults = s.triggerTalents('pressure_change', {
+                    source: 'extra_task_training',
+                    amount: pressure_increase,
+                    task: task,
+                    intensity: intensity
+                }) || [];
+
+                for (const r of talentResults) {
+                    if (!r || !r.result) continue;
+                    const out = r.result;
+                    if (typeof out === 'object') {
+                        const act = out.action;
+                        if (act === 'moyu_cancel_pressure') {
+                            finalPressureIncrease = 0;
+                        } else if (act === 'halve_pressure') {
+                            finalPressureIncrease = finalPressureIncrease * 0.5;
+                        } else if (act === 'double_pressure') {
+                            finalPressureIncrease = finalPressureIncrease * 2.0;
+                        }
+                    }
+                }
+            }
+        } catch (e) { console.error('triggerTalents pressure_change', e); }
+
+        s.pressure += finalPressureIncrease;
+
+        trainingResults.push({
+            name: s.name,
+            multiplier: boostMultiplier,
+            boosts: results.boosts
+        });
+    }
+
+    game.weeks_since_entertainment += 1;
+
+    log(`加训结束。题目：${task.name}`);
+
+    try {
+        if (typeof window !== 'undefined' && window.TalentManager && typeof window.TalentManager.tryAcquireTalent === 'function') {
+            for (let s of game.students) { if (s && s.active !== false) try { window.TalentManager.tryAcquireTalent(s, (typeof intensity !== 'undefined' ? (intensity === 3 ? 0.8 : (intensity === 2 ? 0.4 : 0.2)) : 0.4)); } catch (e) { } }
+        }
+    } catch (e) { console.error('post-extra-training tryAcquireTalent error', e); }
+    for (const result of trainingResults) {
+        const boostStrs = result.boosts.map(b => `${b.type}+${b.actualAmount}`).join(', ');
+        const effPercent = Math.round(result.multiplier * 100);
+        log(`  ${result.name}: 效率${effPercent}% [${boostStrs}]`);
+    }
+
+
+    const __after = typeof __createSnapshot === 'function' ? __createSnapshot() : null;
+    if (__before && __after) __summarizeSnapshot(__before, __after, `加训：${task.name}`);
+
+    try { game.lastTrainingFinishedWeek = game.week; } catch (e) { }
+    try { checkRandomEvents(); } catch (e) { console.error('post-extra-training checkRandomEvents failed', e); }
+}
 function simulateHiddenMockScore(s, diffIdx){
   const knowledge_types = ["数据结构","图论","字符串","数学","动态规划"];
   let total = 0;
@@ -1308,7 +1463,7 @@ function initGame(difficulty, province_choice, student_count){
   }
   
   for(let i=0;i<student_count;i++){
-    let name = generateName();
+    let name = typeof generateName === 'function' ? generateName({ region: prov.name }) : '学生';
     let mean = (min_val + max_val) / 2;
     let stddev = (max_val - min_val);
     let thinking = clamp(normal(mean, stddev), 0, 100);

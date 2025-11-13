@@ -94,8 +94,35 @@ const QUOTES = [
   "没有天赋异禀的幸运，唯有水滴石穿的坚持",
   "没有一步登天的幻想，唯有日积月累的付出",
   "竞赛生没有特权你明白吗？",
-  "自律者出众，懒惰者出局",
-  "重质量，数量次之"
+    "原神，启动！！！",
+    "如果 p 是一个质数，a 是任意整数且 p 不整除 a，那么 a^(p-1) ≡ 1 (mod p)",
+    "如果 n 是正整数，a 是与 n 互质的整数（即 gcd(a, n)=1），那么 a^φ(n) ≡ 1 (mod n)",
+    "对于任意整数 a 和 b，存在整数 x 和 y，使得 ax + by = gcd(a, b)",
+    "将 n 和 k 写成 p 进制数，则 C(n, k) mod p 等于它们各位数字的组合数模 p 的乘积",
+    "广告位招租",
+    "原版seve，魔改HoLuc1078",
+    "自律者出众，懒惰者出局",
+    "重质量，数量次之",
+    "一晚上算出芙宁娜 IP 价值",
+    "米哈游不想赚钱",
+    "玩原玩的",
+    "原神老玩家已经成为原神发展的最大阻碍",
+    "我喜欢 ODT",
+    "珂朵莉实在太可爱了",
+    "原来你也玩原神",
+    "欢迎报考 SDOI",
+    "SDOI 蒸蒸日上",
+    "正整数 p > 1 是质数的充分必要条件是 (p-1)! ≡ -1 (mod p)",
+    "vₚ(n!) = ⌊n/p⌋ + ⌊n/p²⌋ + ⌊n/p³⌋ + ...",
+    "如果 p 是质数且 p|ab，则 p|a 或 p|b。",
+    "对于奇质数 p 和整数 a，(a/p) ≡ a^{(p-1)/2} (mod p)",
+    "在模 p 的简化剩余系中，恰有 (p-1)/2 个二次剩余和 (p-1)/2 个非二次剩余",
+    "I AK IOI",
+    "新手机就是好，但是旧的怎么办",
+    "【数据删除】",
+    "洛谷将会臭名昭著",
+    "rp++",
+    "n 方过百万，暴力碾标算"
 ];
 
 /* =========== UI 辅助 =========== */
@@ -138,7 +165,16 @@ function renderEventCards(){
   const container = $('event-cards-container');
   if(!container) return;
   
-  // 清空并重建结构
+  // 清空并重建结构，释放旧的DOM引用
+  const oldWrapper = document.getElementById('event-cards-wrapper');
+  if(oldWrapper){
+    // 移除滚动事件监听器
+    const clonedWrapper = oldWrapper.cloneNode(false);
+    if(oldWrapper.parentNode){
+      oldWrapper.parentNode.replaceChild(clonedWrapper, oldWrapper);
+    }
+  }
+  
   container.innerHTML = '';
   
   if(recentEvents.length === 0){
@@ -237,61 +273,65 @@ function checkEventCardsOverflow() {
   }
 }
 
-window.addEventListener('load', () => {
-  const container = $('event-cards-container');
-  if (!container) return;
-  (function(){
-    if(!document.getElementById('event-detail-animations')){
-      const s = document.createElement('style');
-      s.id = 'event-detail-animations';
-      s.textContent = `
-        @keyframes et-slide-in-right { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
-        @keyframes et-slide-out-right { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(24px); } }
-        .event-detail { display: none; }
-        .event-detail.visible { display: block; animation: et-slide-in-right 0.25s ease both; }
-        .event-detail.hiding { animation: et-slide-out-right 0.22s ease both; }
-      `;
-      document.head.appendChild(s);
-    }
-  })();
+// 使用单次初始化标志避免重复绑定
+if(!window._eventCardsInitialized){
+  window._eventCardsInitialized = true;
+  
+  window.addEventListener('load', () => {
+    const container = $('event-cards-container');
+    if (!container) return;
+    
+    // 添加动画样式（仅一次）
+    (function(){
+      if(!document.getElementById('event-detail-animations')){
+        const s = document.createElement('style');
+        s.id = 'event-detail-animations';
+        s.textContent = `
+          @keyframes et-slide-in-right { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
+          @keyframes et-slide-out-right { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(24px); } }
+          .event-detail { display: none; }
+          .event-detail.visible { display: block; animation: et-slide-in-right 0.25s ease both; }
+          .event-detail.hiding { animation: et-slide-out-right 0.22s ease both; }
+        `;
+        document.head.appendChild(s);
+      }
+    })();
 
-  container.addEventListener('click', function(e){
-    const btn = e.target.closest('.more-btn');
-    if (!btn) return;
-    const uid = btn.dataset.uid ? parseInt(btn.dataset.uid, 10) : null;
-    if (!uid) return;
-    const detail = container.querySelector(`.event-detail[data-uid='${uid}']`);
-    const desc = container.querySelector(`.card-desc[data-uid='${uid}']`);
-    if (!detail || !desc) return;
+    // 使用事件委托处理"更多"按钮点击
+    container.addEventListener('click', function(e){
+      const btn = e.target.closest('.more-btn');
+      if (!btn) return;
+      const uid = btn.dataset.uid ? parseInt(btn.dataset.uid, 10) : null;
+      if (!uid) return;
+      const detail = container.querySelector(`.event-detail[data-uid='${uid}']`);
+      const desc = container.querySelector(`.card-desc[data-uid='${uid}']`);
+      if (!detail || !desc) return;
 
-    if (detail.classList.contains('visible')){
-      detail.classList.remove('visible');
-      detail.classList.add('hiding');
-      desc.classList.add('clamp');
-      btn.innerText = '更多';
-      const onAnimEnd = function(ev){
+      if (detail.classList.contains('visible')){
+        detail.classList.remove('visible');
+        detail.classList.add('hiding');
+        desc.classList.add('clamp');
+        btn.innerText = '更多';
+        const onAnimEnd = function(ev){
+          detail.classList.remove('hiding');
+          detail.style.display = 'none';
+          detail.removeEventListener('animationend', onAnimEnd);
+        };
+        detail.addEventListener('animationend', onAnimEnd);
+      } else {
+        detail.style.display = 'block';
+        void detail.offsetWidth;
         detail.classList.remove('hiding');
-        detail.style.display = 'none';
-        detail.removeEventListener('animationend', onAnimEnd);
-      };
-      detail.addEventListener('animationend', onAnimEnd);
-    } else {
-      detail.style.display = 'block';
-      void detail.offsetWidth;
-      detail.classList.remove('hiding');
-      detail.classList.add('visible');
-      desc.classList.remove('clamp');
-      btn.innerText = '收起';
-    }
-  });
-});
-
-window.addEventListener('load', () => {
-  const container = $('event-cards-container');
-  if (container) {
+        detail.classList.add('visible');
+        desc.classList.remove('clamp');
+        btn.innerText = '收起';
+      }
+    });
+    
+    // 使用事件委托处理事件选择
     container.addEventListener('click', handleEventChoice);
-  }
-});
+  });
+}
 
 function showEventModal(evt){
   const title = evt?.name || '事件';
@@ -318,6 +358,12 @@ function showChoiceModal(evt){
 
 function renderAll(){
   if(!document.getElementById('header-week')) return;
+  
+  // 清理旧的事件监听器标记
+  if(!window._renderAllCleanupDone){
+    window._renderAllCleanupDone = true;
+  }
+  
   $('header-week').innerText = `第 ${currWeek()} 周`;
   $('header-province').innerText = `省份: ${game.province_name} (${game.province_type})`;
   const headerBudgetEl = $('header-budget');
@@ -406,6 +452,9 @@ function renderAll(){
     const el = $(id);
     if(el) el.innerText = displayEls[id];
   }
+  // 存储学生列表容器引用以便后续清理
+  const studentListEl = $('student-list');
+  
   let out = '';
   for(let s of game.students){
     if(s && s.active === false) continue;
@@ -474,16 +523,36 @@ function renderAll(){
     </div>`;
   }
   if(out==='') out = '<div class="muted">目前没有活跃学生</div>';
-  $('student-list').innerHTML = out;
-  document.querySelectorAll('#student-list .evict-btn').forEach(b=>{
-    b.onclick = (e) => {
-      const idx = parseInt(b.dataset.idx,10);
+  
+  // 清理旧的DOM节点和事件监听器
+  if(studentListEl){
+    // 移除旧的事件监听器
+    const oldButtons = studentListEl.querySelectorAll('.evict-btn');
+    oldButtons.forEach(btn => {
+      const clonedBtn = btn.cloneNode(true);
+      if(btn.parentNode){
+        btn.parentNode.replaceChild(clonedBtn, btn);
+      }
+    });
+    
+    // 更新内容
+    studentListEl.innerHTML = out;
+  }
+  
+  // 重新绑定事件（使用事件委托减少监听器数量）
+  if(studentListEl && !studentListEl._evictDelegated){
+    studentListEl._evictDelegated = true;
+    studentListEl.addEventListener('click', function(e){
+      const btn = e.target.closest('.evict-btn');
+      if(!btn) return;
+      const idx = parseInt(btn.dataset.idx,10);
       if(isNaN(idx)) return;
       if(game.reputation < EVICT_REPUTATION_COST){ alert('声誉不足，无法劝退'); return; }
       if(!confirm(`确认劝退 ${game.students[idx].name}？将消耗声誉 ${EVICT_REPUTATION_COST}`)) return;
       evictSingle(idx);
-    };
-  });
+    });
+  }
+  
   renderEventCards();
 
   try{
@@ -627,10 +696,21 @@ function showModal(html){
 function closeModal(){
   const root = $('modal-root');
   if(!root) return;
+  
+  // 清理事件监听器
   if(root._modalKeyHandler){
     try{ window.removeEventListener('keydown', root._modalKeyHandler); }catch(e){}
     root._modalKeyHandler = null;
   }
+  
+  // 清理DOM内的所有按钮事件监听器
+  const allButtons = root.querySelectorAll('button');
+  allButtons.forEach(btn => {
+    const clone = btn.cloneNode(true);
+    if(btn.parentNode) btn.parentNode.replaceChild(clone, btn);
+  });
+  
+  // 清空内容
   root.innerHTML = '';
 }
 
@@ -1878,3 +1958,220 @@ function outingTrainingUI() {
       renderAll();
     };
 }
+/* =========== 加训按钮渲染逻辑 =========== */
+function renderExtraTrainButton() {
+    // 查找行动按钮容器（根据项目实际结构调整选择器，此处假设为 .action-panel）
+    const actionPanel = document.querySelector('.action-panel') || document.getElementById('actionPanel');
+    if (!actionPanel) {
+        console.warn('未找到行动按钮容器，无法渲染加训按钮');
+        return;
+    }
+
+    // 避免重复创建按钮
+    if (document.getElementById('extra-train-btn')) return;
+
+    // 创建加训按钮
+    const extraTrainBtn = document.createElement('button');
+    extraTrainBtn.id = 'extra-train-btn';
+    extraTrainBtn.className = 'btn'; // 复用现有按钮样式
+    extraTrainBtn.textContent = '加训（无行动值消耗，压力+50%）';
+
+    // 绑定点击事件
+    extraTrainBtn.onclick = () => {
+        try {
+            // 复用现有训练的选题逻辑（需替换为项目中实际获取训练任务的函数）
+            const task = getRandomTrainingTask(); // 示例：获取随机训练任务
+            if (!task) {
+                log('没有可用的训练任务');
+                return;
+            }
+
+            // 调用加训逻辑（假设已实现 extraTrainStudentsWithTask 函数）
+            const intensity = 2; // 中强度，可改为用户选择（如通过 prompt）
+            extraTrainStudentsWithTask(task, intensity);
+
+            // 重新渲染界面更新状态
+            safeRenderAll();
+        } catch (e) {
+            log(`加训失败：${e.message}`);
+            console.error('加训按钮点击事件错误:', e);
+        }
+    };
+
+    // 将按钮添加到容器（放在训练按钮之后，若存在）
+    const trainBtn = actionPanel.querySelector('button[data-action="train"]'); // 假设训练按钮有此属性
+    if (trainBtn) {
+        trainBtn.after(extraTrainBtn); // 插入到训练按钮后面
+    } else {
+        actionPanel.appendChild(extraTrainBtn); // 若无训练按钮则直接添加
+    }
+}
+
+// 在主渲染流程中添加加训按钮
+// 监听 renderAll 执行后调用（若 renderAll 内部有钩子可直接插入，此处用全局监听）
+// 替换原 initExtraTrainButton 函数，确保绑定成功
+function initExtraTrainButton() {
+    const observer = new MutationObserver((mutations) => {
+        const extraTrainBtn = document.getElementById('action-extra-train');
+        if (extraTrainBtn && !extraTrainBtn.__clickBound) {
+            extraTrainBtn.__clickBound = true;
+
+            extraTrainBtn.addEventListener('click', async () => {
+                console.log('[加训按钮] 点击事件触发');
+                try {
+                    if (!window.game) {
+                        throw new Error('游戏实例未初始化');
+                    }
+
+                    const task = getTrainingTask();
+                    if (!task) {
+                        window.log('没有可用的加训任务');
+                        return;
+                    }
+
+                    // 执行加训并强制退队压力超100的学生
+                    executeExtraTraining(task);
+
+                    window.renderAll();
+                    console.log('[加训按钮] 操作完成，已调用 renderAll');
+                } catch (e) {
+                    console.error('[加训按钮] 点击处理失败:', e);
+                    window.log(`加训失败: ${e.message}`);
+                }
+            });
+
+            observer.disconnect();
+        }
+    });
+
+    const container = document.querySelector('.action-cards');
+    if (container) {
+        observer.observe(container, { childList: true, subtree: true });
+    } else {
+        console.warn('[加训按钮] 未找到按钮容器，无法监听动态生成');
+    }
+}
+
+// 补充：获取加训任务（参考训练功能的选题逻辑）
+// 正确逻辑：覆盖所有知识类型
+function getTrainingTask() {
+    const tasks = [
+        { name: '数据结构加训', ability: 'knowledge_ds', difficulty: 30 },
+        { name: '图论加训', ability: 'knowledge_graph', difficulty: 35 },
+        { name: '字符串加训', ability: 'knowledge_string', difficulty: 25 },
+        { name: '数学加训', ability: 'knowledge_math', difficulty: 40 },
+        { name: '动态规划加训', ability: 'knowledge_dp', difficulty: 45 }
+    ];
+    return tasks[Math.floor(Math.random() * tasks.length)]; // 随机选择
+}
+
+// 补充：执行加训逻辑（无行动值消耗，压力+50%）
+// 加训逻辑：包含压力计算+超100直接退队
+function executeExtraTraining(task) {
+    const intensity = 3; // 加训强度设为高（压力增幅更大）
+    window.log(`开始加训：${task.name}（强度：高）`);
+
+    // 复用训练中的环境因子计算（参考game.js的trainStudentsWithTask）
+    const weatherFactor = window.game.getWeatherFactor();
+    const comfort = window.game.getComfort();
+    const comfortFactor = 1.0 + Math.max(0.0, (50 - comfort) / 100.0);
+    const quitList = []; // 记录本次退队学生
+
+    for (let s of window.game.students) {
+        if (!s || !s.active) continue;
+
+        // 1. 计算加训带来的压力增长（基于任务难度和学生能力）
+        const studentAbility = (s.thinking + s.coding) / 2.0;
+        let basePressure = intensity === 1 ? 15 : intensity === 2 ? 25 : 40; // 高难度基础压力
+        const difficultyPressure = Math.max(0, (task.difficulty - studentAbility) * 0.2); // 难度附加压力
+        basePressure += difficultyPressure;
+        basePressure *= 1.8; // 加训额外增幅（确保压力易超100）
+
+        // 应用设施和环境修正（参考game.js）
+        const canteenReduction = window.game.facilities.getCanteenPressureReduction();
+        let pressureIncrease = basePressure * weatherFactor * canteenReduction * comfortFactor;
+
+        // 叠加天赋对压力的影响（如"乐天派"可能降低压力，参考talent.js）
+        try {
+            if (typeof s.triggerTalents === 'function') {
+                const talentResults = s.triggerTalents('pressure_change', {
+                    source: 'extra_train',
+                    amount: pressureIncrease
+                }) || [];
+                // 处理天赋对压力的修正（如减半、抵消等）
+                for (const r of talentResults) {
+                    if (r?.result?.action === 'halve_pressure') {
+                        pressureIncrease *= 0.5;
+                    } else if (r?.result?.action === 'moyu_cancel_pressure') {
+                        pressureIncrease = 0;
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('天赋处理压力失败:', e);
+        }
+
+        // 2. 更新学生压力值
+        s.pressure = (s.pressure || 0) + pressureIncrease;
+        console.log(`[加训压力] ${s.name} 压力变为: ${s.pressure.toFixed(1)}`);
+
+        // 3. 核心判定：压力>100直接退队（无需经过退队倾向周数，参考events.js的burnout事件退队逻辑）
+        if (s.pressure > 100) {
+            quitList.push(s.name);
+            // 从学生列表移除
+            const index = window.game.students.indexOf(s);
+            if (index > -1) {
+                window.game.students.splice(index, 1);
+            }
+            // 更新退队统计和声誉（与burnout事件保持一致）
+            window.game.quit_students = (window.game.quit_students || 0) + 1;
+            window.game.reputation = Math.max(0, window.game.reputation - 10);
+            // 触发退队天赋（如存在）
+            try {
+                if (typeof s.triggerTalents === 'function') {
+                    s.triggerTalents('quit', { reason: 'extra_train_pressure' });
+                }
+            } catch (e) {
+                console.error('退队天赋触发失败:', e);
+            }
+        }
+    }
+
+    // 4. 输出退队日志并处理全退场景
+    if (quitList.length > 0) {
+        const msg = `${quitList.join('、')} 因加训后压力超过100，已直接退队！声誉-10`;
+        window.log(`[加训退队] ${msg}`);
+        window.pushEvent && window.pushEvent({
+            name: '加训退队',
+            description: msg,
+            week: window.game.week
+        });
+
+        // 关键修改：判断是否所有学生均已退队（加训导致）
+        const allQuit = window.game.students.length === 0;
+        if (allQuit) {
+            // 加训导致全退：仅提示，不立即结束游戏
+            const allQuitMsg = `所有学生因加训压力过大退队，虽然这周还没有结束，但是你已经无事可做。`;
+            window.log(`[加训全退] ${allQuitMsg}`);
+            window.pushEvent && window.pushEvent({
+                name: '加训全退警告',
+                description: allQuitMsg,
+                week: window.game.week,
+                isWarning: true
+            });
+            window.checkAllQuitAndTriggerBadEnding();
+            // 不调用 checkAllQuitAndTriggerBadEnding，延迟结局触发
+        } else {
+            // 部分退队：按原逻辑检查是否需要触发结局（若剩余学生后续全退）
+            try {
+                if (typeof window.checkAllQuitAndTriggerBadEnding === 'function') {
+                    window.checkAllQuitAndTriggerBadEnding();
+                }
+            } catch (e) {}
+        }
+    } else {
+        window.log('加训完成，所有学生压力均未超过100');
+    }
+}
+// 在页面加载后初始化（确保DOM就绪）
+window.addEventListener('load', initExtraTrainButton);

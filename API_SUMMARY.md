@@ -287,6 +287,7 @@
 
 ### 游戏操作函数
 - `trainStudentsWithTask(task, intensity)` - 使用题目训练学生
+- `extraTrainStudentsWithTask(task, intensity)` - 加训学生（不消耗行动值，压力增加50%）
 - `outingTrainingWithSelection(difficulty_choice, province_choice, selectedNames, inspireTalents)` - 外出集训
 - `holdMockContestUI()` - 模拟赛UI
 - `entertainmentUI()` - 娱乐UI
