@@ -26,9 +26,13 @@
 
 ## 🎮 游玩方式
 
-由于魔改作者不会玩 GIT，所以劳驾大家把文件下载下来玩，打开 `index.html` 就行了喵。
+[访问 https://holuc1078.github.io/OItrainer/ 即可](https://holuc1078.github.io/OItrainer/)
 
 ---
+
+## 日志
+
+`upodate 2025/11/13`：增加了加训、海外集训和一些隐藏天赋，当然也有彩蛋。
 
 ## 🧩 开发信息
 
