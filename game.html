@@ -229,42 +229,12 @@
     (function () {
         const input = document.getElementById('coach-speech-input');
         if (!input) return;
-        const cheatCodes = [
-            '我是李欣隆的狗',
-            '如果幸福有颜色，那一定是被终末之红染尽的苍蓝',
-            '我永远喜欢珂朵莉',
-            '珂朵莉实在太可爱了',
-            'Chtholly',
-            'クトリ'
-        ];
         // 在 game.html 中找到训话输入处理的 keydown 事件函数
         input.addEventListener('keydown', function (event) {
             if (event.key === 'Enter' || event.keyCode === 13) {
                 event.preventDefault();
                 const speechText = (input.value || '').trim();
                 if (!speechText) return;
-                if (cheatCodes.includes(speechText.toLowerCase())) {
-                    // 新增：检查是否已使用过作弊码（每局游戏仅一次）
-                    // 初始化游戏状态中的作弊标记（若不存在）
-                    if (typeof window.game.cheatUsed === 'undefined') {
-                        window.game.cheatUsed = false;
-                    }
-
-                    if (window.game.cheatUsed) {
-                        // 已使用过，提示并阻止执行
-                        alert('你还想要几个李欣隆？');
-                        return;
-                    }
-
-                    // 3. 调用debug.js中的addSuperStudent()函数
-                    if (typeof addSuperStudent === 'function') {
-                        addSuperStudent();
-                        // 标记为已使用
-                        window.game.cheatUsed = true;
-                        input.value = ''; // 清空输入框
-                        return; // 阻止后续正常训话逻辑
-                    }
-                }
                 // 检测以 '/' 开头的调试指令（执行代码）
                 if (speechText.startsWith('/')) {
                     // 提取指令内容（去除开头的 '/'）

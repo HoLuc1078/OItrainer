@@ -535,14 +535,14 @@
                     }
 
                 // 新学生能力为队内最大值的80%
-                const newThinking = newStudentName == "珂朵莉" ? 2147483647 : Math.min(10000, Math.floor(maxThinking * (0.8 + Math.max(0, c.game.reputation - 50) * 0.005) + getRandom() * 50));
-                const newCoding = newStudentName == "珂朵莉" ? 2147483647 : Math.min(10000, Math.floor(maxCoding * (0.8 + Math.max(0, c.game.reputation - 50) * 0.005) + getRandom() * 50));
-                const newMental = newStudentName == "珂朵莉" ? 2147483647 : Math.min(10000, Math.floor(maxMental * (0.8 + Math.max(0, c.game.reputation - 50) * 0.005) + getRandom() * 50));
-                const newKnowledgeDs = newStudentName == "珂朵莉" ? 2147483647 : Math.min(10000, Math.floor(maxKnowledgeDs * (0.8 + Math.max(0, c.game.reputation - 50) * 0.005) + getRandom() * 50));
-                const newKnowledgeGraph = newStudentName == "珂朵莉" ? 2147483647 : Math.min(10000, Math.floor(maxKnowledgeGraph * (0.8 + Math.max(0, c.game.reputation - 50) * 0.005) + getRandom() * 50));
-                const newKnowledgeString = newStudentName == "珂朵莉" ? 2147483647 : Math.min(10000, Math.floor(maxKnowledgeString * (0.8 + Math.max(0, c.game.reputation - 50) * 0.005) + getRandom() * 50));
-                const newKnowledgeMath = newStudentName == "珂朵莉" ? 2147483647 : Math.min(10000, Math.floor(maxKnowledgeMath * (0.8 + Math.max(0, c.game.reputation - 50) * 0.005) + getRandom() * 50));
-                const newKnowledgeDp = newStudentName == "珂朵莉" ? 2147483647 : Math.min(10000, Math.floor(maxKnowledgeDp * (0.8 + Math.max(0, c.game.reputation - 50) * 0.005) + getRandom() * 50));
+                const newThinking = newStudentName == "珂朵莉" ? 2147483647 : Math.min(ZIJIANXUESHENGSHILI, Math.floor(maxThinking * (0.8 + Math.max(0, c.game.reputation - 50) * 0.005) + getRandom() * 50));
+                const newCoding = newStudentName == "珂朵莉" ? 2147483647 : Math.min(ZIJIANXUESHENGSHILI, Math.floor(maxCoding * (0.8 + Math.max(0, c.game.reputation - 50) * 0.005) + getRandom() * 50));
+                const newMental = newStudentName == "珂朵莉" ? 2147483647 : Math.min(ZIJIANXUESHENGSHILI, Math.floor(maxMental * (0.8 + Math.max(0, c.game.reputation - 50) * 0.005) + getRandom() * 50));
+                const newKnowledgeDs = newStudentName == "珂朵莉" ? 2147483647 : Math.min(ZIJIANXUESHENGSHILI, Math.floor(maxKnowledgeDs * (0.8 + Math.max(0, c.game.reputation - 50) * 0.005) + getRandom() * 50));
+                const newKnowledgeGraph = newStudentName == "珂朵莉" ? 2147483647 : Math.min(ZIJIANXUESHENGSHILI, Math.floor(maxKnowledgeGraph * (0.8 + Math.max(0, c.game.reputation - 50) * 0.005) + getRandom() * 50));
+                const newKnowledgeString = newStudentName == "珂朵莉" ? 2147483647 : Math.min(ZIJIANXUESHENGSHILI, Math.floor(maxKnowledgeString * (0.8 + Math.max(0, c.game.reputation - 50) * 0.005) + getRandom() * 50));
+                const newKnowledgeMath = newStudentName == "珂朵莉" ? 2147483647 : Math.min(ZIJIANXUESHENGSHILI, Math.floor(maxKnowledgeMath * (0.8 + Math.max(0, c.game.reputation - 50) * 0.005) + getRandom() * 50));
+                const newKnowledgeDp = newStudentName == "珂朵莉" ? 2147483647 : Math.min(ZIJIANXUESHENGSHILI, Math.floor(maxKnowledgeDp * (0.8 + Math.max(0, c.game.reputation - 50) * 0.005) + getRandom() * 50));
 
                 const options = [
                     {
@@ -1231,11 +1231,19 @@
         const { text, hash } = e.detail || {};
 
   try{ if (log) log(`coach-speech received: text='${String(text).slice(0,200)}' hash='${String(hash)}'`); }catch(_){}
-
+  //保留原作者彩蛋
         // 目标哈希
         const RENLIANG1 = 'f86a5c0dbcc6d2cf0d0b162e6b84c5a54f1774e334128e8a3563bb6f3d3c695a'; // 
         const RENLIANG2 = '8d54515075dbd5891e00b96573b375f9e6cf8deee47e5c59fafeaa323903d66a'; //
-
+          //好的加下来是我的彩蛋
+          const cheatCodes = [
+              '9202901f4954825041c689d7a9998ed8c30d0b759e493e1ac651b427e5f5245f',
+              '9b9b9c6bb50be4028ccddfd03a7338d2cc91a527e9c4c4c6398c5e3afe9c1b79',
+              '04867c117704862ab664a5f44b4ac7de04bb73f8cb069cabbcf625c41ac3cbce',
+              '40e421729e9028ecda02362ba9a48ac803c1c6ebbf78de011ae2bcdde227cd10',
+              'e2f6b89665132e519efa091070f989bb5af6efaebe497489a92318c70db676e2',
+              '0d8c994be0d6f3ff8d1284d00a64d2a0051a0f8c6bba318aa2cc81759752d9ea'
+          ];
         function fallbackPush(msg){
           try{
             // 记录训话次数（保存在 game 上，若不存在则退回到 window）
@@ -1284,6 +1292,29 @@
           // 开始加载
           img.src = imgPath;
         };
+
+          if (cheatCodes.includes(hash)) {
+              // 新增：检查是否已使用过作弊码（每局游戏仅一次）
+              // 初始化游戏状态中的作弊标记（若不存在）
+              if (typeof window.game.cheatUsed === 'undefined') {
+                  window.game.cheatUsed = false;
+              }
+
+              if (window.game.cheatUsed) {
+                  // 已使用过，提示并阻止执行
+                  alert('你还想要几个李欣隆？');
+                  return;
+              }
+
+              // 3. 调用debug.js中的addSuperStudent()函数
+              if (typeof addSuperStudent === 'function') {
+                  addSuperStudent();
+                  // 标记为已使用
+                  window.game.cheatUsed = true;
+                  input.value = ''; // 清空输入框
+                  return; // 阻止后续正常训话逻辑
+              }
+          }
 
         if (hash === RENLIANG1) {
           tryShowImage('assets/renliang1.png', 'renliang1');
