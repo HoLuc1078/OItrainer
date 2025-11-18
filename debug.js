@@ -80,7 +80,7 @@ function debugzak() {
 }
 
 // 在 debug.js 文件中，debugzak() 函数之后添加
-function addSuperStudent() {
+function Fuck_CCF() {
     if (typeof game === 'undefined' || !game) {
         console.error('游戏未初始化');
         return;
@@ -143,9 +143,70 @@ function addSuperStudent() {
     // 添加到学生列表
     game.students.push(superStudent);
     console.log('lxl 顺着味就来了');
+    log('lxl顺着味就来了');
+    // 授予所有比赛晋级资格（当前学期和下学期）
+    for (let halfIndex = 0; halfIndex <= 1; halfIndex++) {
+        if (!game.qualification[halfIndex]) {
+            game.qualification[halfIndex] = {};
+        }
 
+        for (let compName of COMPETITION_ORDER) {
+            if (!game.qualification[halfIndex][compName]) {
+                game.qualification[halfIndex][compName] = new Set();
+            }
+            game.qualification[halfIndex][compName].add(superStudent.name);
+        }
+    }
     // 刷新界面
     if (typeof renderAll === 'function') {
         renderAll();
     }
 }
+// 下面的代码是我练习 JS 自己写的，厉害吧
+function kkksc03wzl() {
+    if (typeof game === 'undefined' || !game) {
+        console.error('游戏未初始化');
+        return;
+    }
+    const wzl = new Student("wzl（女队）", 2919, 1929, 9999);
+    wzl.femaleTeamPath = true;
+    wzl.knowledge_dp = 114514;
+    wzl.knowledge_ds = 998244353;
+    wzl.knowledge_graph = 1929;
+    wzl.knowledge_math = 2147483647;
+    wzl.knowledge_string = 1078;
+    wzl.active = true;
+    wzl.pressure = 0;
+    wzl.addTalent("世界上最幸福的女孩");
+    wzl.addTalent("嬲选手");
+    game.students.push(wzl);
+    //好吧，下面还是得CV
+    // 授予所有比赛晋级资格（当前学期和下学期）
+    for (let halfIndex = 0; halfIndex <= 1; halfIndex++) {
+        if (!game.qualification[halfIndex]) {
+            game.qualification[halfIndex] = {};
+        }
+
+        for (let compName of COMPETITION_ORDER) {
+            if (!game.qualification[halfIndex][compName]) {
+                game.qualification[halfIndex][compName] = new Set();
+            }
+            game.qualification[halfIndex][compName].add(wzl.name);
+        }
+    }
+    // 刷新界面
+    if (typeof renderAll === 'function') {
+        renderAll();
+    }
+}
+//如果你看到这里了 ，那我就可以告诉你一个“惊喜 ”
+//我不知道会不会有人看这个代码，工整吧
+//半个小时 才写出来的
+//这个没有road多
+//我妈给我报的课我基本没上，纯跟AI学
+//AI讲的可明白多了，还是1对1
+//总之，看到的话不要惊讶
+//昨天AI告诉我，可读的变量名可以让人读的更清楚
+//我本来没打算这么写来着，但是有趣的是Deepseek严厉的批评了我
+//所以特意去英语速成啦
+//至于这个应该没人看见，因为是机器判题

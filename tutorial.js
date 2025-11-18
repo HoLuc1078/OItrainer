@@ -133,7 +133,7 @@ class TutorialSystem {
   }
 
   start() {
-     检查是否已完成过教程
+     //检查是否已完成过教程
     if (localStorage.getItem('tutorial_completed') === 'true') {
       return;
     }

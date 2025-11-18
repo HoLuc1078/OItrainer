@@ -960,17 +960,371 @@ function overseasTrainingWithSelection(difficulty_choice, country_choice, select
     if (__before && __after) __summarizeSnapshot(__before, __after, `出境集训：${target.name} 难度${difficulty_choice}`);
     // 最简单的事件触发 - 直接根据概率触发
 
-    // 泰国特殊事件
-    if (target.name === '泰国' && Math.random() < 0.5) {
-        const participants = game.students.filter(s => s.active && selectedNames.includes(s.name));
-        if (participants.length > 0) {
-            const targetStudent = participants[Math.floor(Math.random() * participants.length)];
-            targetStudent.femaleTeamPath = true;
-            pushEvent({
-                name: '女队道路',
-                description: `${targetStudent.name}在泰国集训期间受到启发，走上女队发展道路`,
-                week: game.week
-            });
+    if (Math.random() < CHUJINGFAZHI) {
+        switch (target.name) {
+            case '泰国':
+                const thaiParticipants = game.students.filter(s => s.active && selectedNames.includes(s.name));
+                if (thaiParticipants.length > 0) {
+                    const targetStudent = thaiParticipants[Math.floor(Math.random() * thaiParticipants.length)];
+                    targetStudent.femaleTeamPath = true;
+                    pushEvent({
+                        name: '女队道路',
+                        description: `${targetStudent.name}在泰国集训期间受到启发，走上女队发展道路`,
+                        week: game.week
+                    });
+                    targetStudent.name = targetStudent.name + '（女队）';
+                }
+                break;
+
+            case '香港':
+                const hkParticipants = game.students.filter(s => s.active && selectedNames.includes(s.name));
+                if (hkParticipants.length > 0) {
+                    const targetStudent = hkParticipants[Math.floor(Math.random() * hkParticipants.length)];
+                    const shoppingCost = uniformInt(1000, 5000);
+
+                    game.budget -= shoppingCost;
+                    targetStudent.pressure = Math.max(0, targetStudent.pressure - 20);
+
+                    pushEvent({
+                        name: '香港购物',
+                        description: `${targetStudent.name}在香港购物消费¥${shoppingCost}，压力-20`,
+                        week: game.week
+                    });
+                }
+                break;
+
+            case '澳门':
+                const macauParticipants = game.students.filter(s => s.active && selectedNames.includes(s.name));
+                if (macauParticipants.length > 0) {
+                    const targetStudent = macauParticipants[Math.floor(Math.random() * macauParticipants.length)];
+                    const gamblingResult = uniformInt(-10000, 10000);
+
+                    game.budget += gamblingResult;
+
+                    let description = '';
+                    if (gamblingResult > 0) {
+                        description = `${targetStudent.name}在澳门赌博赢得¥${gamblingResult}`;
+                    } else if (gamblingResult < 0) {
+                        description = `${targetStudent.name}在澳门赌博损失¥${Math.abs(gamblingResult)}`;
+                    } else {
+                        description = `${targetStudent.name}在澳门赌博不输不赢`;
+                    }
+
+                    pushEvent({
+                        name: '澳门赌博',
+                        description: description,
+                        week: game.week
+                    });
+                }
+                break;
+
+            case '匈牙利':
+                const hungaryParticipants = game.students.filter(s => s.active && selectedNames.includes(s.name));
+                if (hungaryParticipants.length > 0) {
+                    const targetStudent = hungaryParticipants[Math.floor(Math.random() * hungaryParticipants.length)];
+                    targetStudent.knowledge_graph += 10;
+                    pushEvent({
+                        name: '匈牙利算法',
+                        description: `${targetStudent.name}在匈牙利学习了匈牙利算法，对二分图有了更深的见解，图论+10`,
+                        week: game.week
+                    });
+                }
+                break;
+
+            case '美国':
+                const usParticipants = game.students.filter(s => s.active && selectedNames.includes(s.name));
+                if (usParticipants.length > 0) {
+                    const targetStudent = usParticipants[Math.floor(Math.random() * usParticipants.length)];
+                    if (Math.random() < 0.1) {
+                        targetStudent.thinking += 30;
+                        targetStudent.coding += 30;
+                        targetStudent.mental += 30;
+                        pushEvent({
+                            name: '遇见特朗普',
+                            description: `${targetStudent.name}在美国遇见特朗普，受到启发，全能力+30`,
+                            week: game.week
+                        });
+                    } else {
+                        targetStudent.thinking += 10;
+                        targetStudent.coding += 10;
+                        targetStudent.mental += 10;
+                        targetStudent.pressure += 20;
+                        pushEvent({
+                            name: '与顶尖选手切磋',
+                            description: `${targetStudent.name}在美国与顶尖选手切磋，全能力+10，压力+20`,
+                            week: game.week
+                        });
+                    }
+                }
+                break;
+
+            case '日本':
+                const japanParticipants = game.students.filter(s => s.active && selectedNames.includes(s.name));
+                if (japanParticipants.length > 0) {
+                    const targetStudent = japanParticipants[Math.floor(Math.random() * japanParticipants.length)];
+                        targetStudent.pressure = 0;
+                        pushEvent({
+                            name: '文化体验',
+                            description: `${targetStudent.name}在日本🔞🔞🔞🔞，压力清零`,
+                            week: game.week
+                        });
+                }
+                break;
+
+            //case '韩国':
+            //    const koreaParticipants = game.students.filter(s => s.active && selectedNames.includes(s.name));
+            //    if (koreaParticipants.length > 0) {
+            //        const targetStudent = koreaParticipants[Math.floor(Math.random() * koreaParticipants.length)];
+            //        if (Math.random() < 0.3) {
+            //            // 电竞训练
+            //            targetStudent.pressure -= 10;
+            //            targetStudent.addTalent('电竞选手');
+            //            pushEvent({
+            //                name: '电竞训练',
+            //                description: `${targetStudent.name}在韩国参与电竞训练，压力-10`,
+            //                week: game.week
+
+            //            });
+            //        } else {
+            //            // 高强度训练
+            //            targetStudent.pressure += 25;
+            //            targetStudent.thinking += 8;
+            //            targetStudent.coding += 8;
+            //            pushEvent({
+            //                name: '高强度训练',
+            //                description: `${targetStudent.name}在韩国接受高强度训练，思维+8，编程+8，压力+25`,
+            //                week: game.week
+            //            });
+            //        }
+            //    }
+            //    break;
+
+            //case '新加坡':
+            //    const singaporeParticipants = game.students.filter(s => s.active && selectedNames.includes(s.name));
+            //    if (singaporeParticipants.length > 0) {
+            //        const targetStudent = singaporeParticipants[Math.floor(Math.random() * singaporeParticipants.length)];
+            //        // 多语言环境
+            //        targetStudent.thinking += 12;
+            //        pushEvent({
+            //            name: '新加坡的魅力',
+            //            description: `${targetStudent.name}喜欢上了新加坡的小清新环境，思维+12`,
+            //            week: game.week
+            //        });
+            //    }
+            //    break;
+
+            //case '德国':
+            //    const germanyParticipants = game.students.filter(s => s.active && selectedNames.includes(s.name));
+            //    if (germanyParticipants.length > 0) {
+            //        const targetStudent = germanyParticipants[Math.floor(Math.random() * germanyParticipants.length)];
+            //        // 严谨训练
+            //        targetStudent.thinking += 15;
+            //        targetStudent.knowledge_ds += 10;
+            //        targetStudent.pressure += 15;
+            //        pushEvent({
+            //            name: '严谨训练',
+            //            description: `${targetStudent.name}在德国接受严谨训练，思维+15，数据结构+10，压力+15`,
+            //            week: game.week
+            //        });
+            //    }
+            //    break;
+
+            //case '英国':
+            //    const ukParticipants = game.students.filter(s => s.active && selectedNames.includes(s.name));
+            //    if (ukParticipants.length > 0) {
+            //        const targetStudent = ukParticipants[Math.floor(Math.random() * ukParticipants.length)];
+            //        // 剑桥/牛津风格
+            //        targetStudent.knowledge_math += 12;
+            //        targetStudent.knowledge_string += 8;
+            //        pushEvent({
+            //            name: '传统学术训练',
+            //            description: `${targetStudent.name}在英国接受传统学术训练，数学+12，字符串+8`,
+            //            week: game.week
+            //        });
+            //    }
+            //    break;
+
+            //case '加拿大':
+            //    const canadaParticipants = game.students.filter(s => s.active && selectedNames.includes(s.name));
+            //    if (canadaParticipants.length > 0) {
+            //        const targetStudent = canadaParticipants[Math.floor(Math.random() * canadaParticipants.length)];
+            //        // 自然环境放松
+            //        targetStudent.pressure -= 25;
+            //        targetStudent.mental += 10;
+            //        pushEvent({
+            //            name: '自然疗愈',
+            //            description: `${targetStudent.name}在加拿大自然环境中放松，压力-25，心理+10`,
+            //            week: game.week
+            //        });
+            //    }
+            //    break;
+
+            //case '越南':
+            //    const vietnamParticipants = game.students.filter(s => s.active && selectedNames.includes(s.name));
+            //    if (vietnamParticipants.length > 0) {
+            //        const targetStudent = vietnamParticipants[Math.floor(Math.random() * vietnamParticipants.length)];
+            //        // 艰苦训练
+            //        targetStudent.coding += 20;
+            //        targetStudent.pressure += 30;
+            //        pushEvent({
+            //            name: '艰苦训练',
+            //            description: `${targetStudent.name}在越南接受艰苦训练，编程+20，压力+30`,
+            //            week: game.week
+            //        });
+            //    }
+            //    break;
+
+            //case '印度':
+            //    const indiaParticipants = game.students.filter(s => s.active && selectedNames.includes(s.name));
+            //    if (indiaParticipants.length > 0) {
+            //        const targetStudent = indiaParticipants[Math.floor(Math.random() * indiaParticipants.length)];
+            //        // 数学天赋
+            //        targetStudent.knowledge_math += 20;
+            //        targetStudent.coding += 5;
+            //        const Fuck = uniformInt(0, 10000);
+
+            //        game.budget += Fuck;
+            //        pushEvent({
+            //            name: '数学天赋激发',
+            //            description: `${targetStudent.name}在印度做服务外包产业，`,
+            //            week: game.week
+            //        });
+            //    }
+            //    break;
+
+            //case '俄罗斯':
+            //    const russiaParticipants = game.students.filter(s => s.active && selectedNames.includes(s.name));
+            //    if (russiaParticipants.length > 0) {
+            //        const targetStudent = russiaParticipants[Math.floor(Math.random() * russiaParticipants.length)];
+            //        // 严冬训练
+            //        if (Math.random() < 0.2) {
+            //            targetStudent.sick_weeks += 1;
+            //            pushEvent({
+            //                name: '严寒生病',
+            //                description: `${targetStudent.name}在俄罗斯严寒中生病，病程+1周`,
+            //                week: game.week
+            //            });
+            //        } else {
+            //            targetStudent.thinking += 15;
+            //            targetStudent.knowledge_dp += 10;
+            //            pushEvent({
+            //                name: '严冬训练',
+            //                description: `${targetStudent.name}在俄罗斯严冬中坚持训练，思维+15，动态规划+10`,
+            //                week: game.week
+            //            });
+            //        }
+            //    }
+            //    break;
+
+            //case '巴西':
+            //    const brazilParticipants = game.students.filter(s => s.active && selectedNames.includes(s.name));
+            //    if (brazilParticipants.length > 0) {
+            //        const targetStudent = brazilParticipants[Math.floor(Math.random() * brazilParticipants.length)];
+            //        // 狂欢节影响
+            //        if (Math.random() < 0.4) {
+            //            targetStudent.pressure = 0;
+            //            targetStudent.mental += 15;
+            //            pushEvent({
+            //                name: '狂欢节放松',
+            //                description: `${targetStudent.name}在巴西狂欢节中彻底放松，压力清零，心理+15`,
+            //                week: game.week
+            //            });
+            //        } else {
+            //            targetStudent.pressure += 20;
+            //            pushEvent({
+            //                name: '训练分心',
+            //                description: `${targetStudent.name}在巴西被狂欢节分心，压力+20`,
+            //                week: game.week
+            //            });
+            //        }
+            //    }
+            //    break;
+
+            //case '法国':
+            //    const franceParticipants = game.students.filter(s => s.active && selectedNames.includes(s.name));
+            //    if (franceParticipants.length > 0) {
+            //        const targetStudent = franceParticipants[Math.floor(Math.random() * franceParticipants.length)];
+            //        // 艺术思维
+            //        targetStudent.thinking += 12;
+            //        targetStudent.knowledge_graph += 8;
+            //        pushEvent({
+            //            name: '艺术思维训练',
+            //            description: `${targetStudent.name}在法国接受艺术思维训练，思维+12，图论+8`,
+            //            week: game.week
+            //        });
+            //    }
+            //    break;
+
+            //case '澳大利亚':
+            //    const australiaParticipants = game.students.filter(s => s.active && selectedNames.includes(s.name));
+            //    if (australiaParticipants.length > 0) {
+            //        const targetStudent = australiaParticipants[Math.floor(Math.random() * australiaParticipants.length)];
+            //        // 户外冒险
+            //        if (Math.random() < 0.1) {
+            //            targetStudent.sick_weeks += 2;
+            //            pushEvent({
+            //                name: '野外受伤',
+            //                description: `${targetStudent.name}在澳大利亚野外冒险中受伤，病程+2周`,
+            //                week: game.week
+            //            });
+            //        } else {
+            //            targetStudent.mental += 20;
+            //            targetStudent.pressure -= 15;
+            //            pushEvent({
+            //                name: '户外拓展',
+            //                description: `${targetStudent.name}在澳大利亚户外拓展，心理+20，压力-15`,
+            //                week: game.week
+            //            });
+            //        }
+            //    }
+            //    break;
+
+            //case '意大利':
+            //    const italyParticipants = game.students.filter(s => s.active && selectedNames.includes(s.name));
+            //    if (italyParticipants.length > 0) {
+            //        const targetStudent = italyParticipants[Math.floor(Math.random() * italyParticipants.length)];
+            //        // 美食享受
+            //        const foodCost = uniformInt(800, 2000);
+            //        game.budget -= foodCost;
+            //        targetStudent.pressure -= 25;
+            //        targetStudent.comfort += 10;
+            //        pushEvent({
+            //            name: '意大利美食',
+            //            description: `${targetStudent.name}在意大利享受美食消费¥${foodCost}，压力-25，舒适度+10`,
+            //            week: game.week
+            //        });
+            //    }
+            //    break;
+
+            //case '埃及':
+            //    const egyptParticipants = game.students.filter(s => s.active && selectedNames.includes(s.name));
+            //    if (egyptParticipants.length > 0) {
+            //        const targetStudent = egyptParticipants[Math.floor(Math.random() * egyptParticipants.length)];
+            //        // 古文明启发
+            //        targetStudent.thinking += 15;
+            //        targetStudent.knowledge_math += 10;
+            //        pushEvent({
+            //            name: '古文明启发',
+            //            description: `${targetStudent.name}在埃及受到古文明启发，思维+15，数学+10`,
+            //            week: game.week
+            //        });
+            //    }
+            //    break;
+
+            //case '瑞士':
+            //    const switzerlandParticipants = game.students.filter(s => s.active && selectedNames.includes(s.name));
+            //    if (switzerlandParticipants.length > 0) {
+            //        const targetStudent = switzerlandParticipants[Math.floor(Math.random() * switzerlandParticipants.length)];
+            //        // 精准训练
+            //        targetStudent.coding += 12;
+            //        targetStudent.knowledge_ds += 8;
+            //        pushEvent({
+            //            name: '精准训练',
+            //            description: `${targetStudent.name}在瑞士接受精准训练，编程+12，数据结构+8`,
+            //            week: game.week
+            //        });
+            //    }
+            //    break;
         }
     }
 

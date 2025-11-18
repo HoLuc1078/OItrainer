@@ -1230,7 +1230,7 @@
       document.addEventListener('coach-speech', (e) => {
         const { text, hash } = e.detail || {};
 
-  try{ if (log) log(`coach-speech received: text='${String(text).slice(0,200)}' hash='${String(hash)}'`); }catch(_){}
+  //try{ if (log) log(`coach-speech received: text='${String(text).slice(0,200)}' hash='${String(hash)}'`); }catch(_){}
   //保留原作者彩蛋
         // 目标哈希
         const RENLIANG1 = 'f86a5c0dbcc6d2cf0d0b162e6b84c5a54f1774e334128e8a3563bb6f3d3c695a'; // 
@@ -1242,8 +1242,22 @@
               '04867c117704862ab664a5f44b4ac7de04bb73f8cb069cabbcf625c41ac3cbce',
               '40e421729e9028ecda02362ba9a48ac803c1c6ebbf78de011ae2bcdde227cd10',
               'e2f6b89665132e519efa091070f989bb5af6efaebe497489a92318c70db676e2',
-              '0d8c994be0d6f3ff8d1284d00a64d2a0051a0f8c6bba318aa2cc81759752d9ea'
+              '0d8c994be0d6f3ff8d1284d00a64d2a0051a0f8c6bba318aa2cc81759752d9ea',
+              'cf74d4934c077199d99bee5b35d4cba640cde7b64d8a1be468d8340e86b64860'
           ];
+          //上面那个翻源代码能翻出来，不过下面的那个不行啦
+          const kkksc03wzl = [
+              'c24384a8e87d70217e90ce043b470930af068120611d36b62065d6121f18b8d6',
+              'a2b805339230ddb085305f7da9ea0def88e10f7c30ec80ee41816e1289e89f2e',
+              '4338db4e9da9105463001b05dce128157cb1404fe11e043f6aa23698b75b325f',
+              '35ce921793d552d16be63a7a8cc757acc8952c7e9f666f7c392e506756db5b1d',
+              '725f3f1816f7bf7cb91ebaab6465634e75311319f6cbfa52e45ac2e3fbbe74a5',
+              '0b6c4db90bd586f51d2d1df1e28fcd18dbb6e45e41909d4517d78daf241c7c47',
+              'fc0c627850d88ed58cd3d4728192d91a1d7ac665bf7b8690f53ef715b23af1c8',
+              '16546c9e77fe6b52db3854b9173c33747609e67b274e3e30ad99416291af41b4',
+              '8262026e02da90d8edf69b0f243916ec491f25dea72d0a2c19cddfbe8adfb867'
+          ];
+          const miaomiaomiao = 'd7b998b8c7ef7b05e070f30c3ed369f400d99e550df28b1f9c08a61b73478f30';
         function fallbackPush(msg){
           try{
             // 记录训话次数（保存在 game 上，若不存在则退回到 window）
@@ -1307,15 +1321,21 @@
               }
 
               // 3. 调用debug.js中的addSuperStudent()函数
-              if (typeof addSuperStudent === 'function') {
-                  addSuperStudent();
+              if (typeof Fuck_CCF === 'function') {
+                  Fuck_CCF();
                   // 标记为已使用
                   window.game.cheatUsed = true;
                   input.value = ''; // 清空输入框
                   return; // 阻止后续正常训话逻辑
               }
           }
-
+          if (hash === miaomiaomiao) {
+              //for (let s of game.students) {
+              //    s.pressure = 0;
+              //}
+              log('学生对你说的话表示认同，压力清零');
+              return;
+          }
         if (hash === RENLIANG1) {
           tryShowImage('assets/renliang1.png', 'renliang1');
           return;
