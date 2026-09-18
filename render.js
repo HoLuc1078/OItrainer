@@ -2004,7 +2004,7 @@ function overseasTrainingUI() {
     showModal(`<h3>出境集训</h3>
       <label class="block">难度</label>
       <select id="overseas-diff"><option value="1">基础班</option><option value="2">提高班</option><option value="3">冲刺班</option></select>
-      <label class="block">国家/地区</label>
+      <label class="block">国家/地区 <a href="country.html" target="_blank" rel="noopener" style="font-size:12px;font-weight:400;margin-left:6px">查看国家一览 ↗</a></label>
       <div id="overseas-country-grid" class="prov-grid"></div>
       <label class="block">选择学生（点击卡片选择参加）</label>
       <div id="overseas-student-grid" class="student-grid" style="max-height:180px;overflow:auto;border:1px solid #eee;padding:6px;margin-bottom:8px"></div>

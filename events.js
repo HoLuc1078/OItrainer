@@ -1,4 +1,4 @@
-﻿/* events.js
+/* events.js
    事件管理器：为项目提供可扩展的随机事件系统
    - Event structure: {id, name, check(ctx) => boolean, run(ctx) => void, description}
    - 使用 register/registerDefaultEvents/clear/checkRandomEvents
@@ -28,13 +28,17 @@
         description: '台风来袭，舒适度和经费受损',
         check: c => shouldTriggerWeatherEvent(c.game.province_name, c.game.week, 'typhoon'),
         run: c => {
+          const lucky = [];
           for(let s of c.game.students){
             if(!s || s.active === false) continue;
             s.comfort_modifier = (s.comfort_modifier || 0) - 50;
+            // 让「追风者」等天赋有机会响应台风（其 handler 会自行清零压力）
+            try{ if(typeof s.triggerTalents === 'function') s.triggerTalents('pressure_change', { source: 'typhoon', amount: 0 }); }catch(e){}
+            if(Number(s.pressure || 0) === 0 && s.talents && s.talents.has('追风者')) lucky.push(s.name);
           }
           const loss = utils.uniformInt(10000, 20000);
           c.game.recordExpense(loss, '台风损失');
-          const msg = `台风来袭，舒适度 -50%，经费损失 ¥${loss}`;
+          const msg = `台风来袭，舒适度 -50%，经费损失 ¥${loss}` + (lucky.length ? `；${lucky.join('、')} 迎风而上，压力清零` : '');
           log && log(`[台风] ${msg}`);
           window.pushEvent && window.pushEvent({ name:'台风', description: msg, week: c.game.week });
         }

@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>查看国家 · OI 教练模拟器</title>
+<style>
+  :root{ --bg:#0f1420; --panel:#171d2b; --panel2:#1e2637; --line:#2a3446; --text:#e6ecf5; --muted:#94a3b8; --accent:#4caf50; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; padding:0; background:linear-gradient(160deg,#0f1420,#131a29 60%,#0d1119); color:var(--text);
+        font-family:"Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif; min-height:100vh; }
+  .wrap{ max-width:1180px; margin:0 auto; padding:28px 18px 64px; }
+  header h1{ margin:0 0 6px; font-size:26px; letter-spacing:2px; }
+  header .sub{ color:var(--muted); font-size:14px; line-height:1.9; margin:0 0 6px; }
+  .notice{ margin:14px 0 20px; padding:10px 14px; border-left:3px solid var(--accent); background:#16202e;
+           color:#b9c7d9; font-size:13px; line-height:1.8; border-radius:0 6px 6px 0; }
+  .toolbar{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:16px; }
+  .toolbar .lbl{ color:var(--muted); font-size:13px; margin-right:2px; }
+  .tab{ padding:6px 14px; border-radius:999px; border:1px solid var(--line); background:var(--panel); color:#c7d2e0;
+        font-size:13px; cursor:pointer; transition:.15s; }
+  .tab:hover{ border-color:var(--accent); }
+  .tab.on{ background:var(--accent); border-color:var(--accent); color:#06120a; font-weight:600; }
+  .grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(268px,1fr)); gap:14px; }
+  .card{ background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 15px;
+         transition:.15s; position:relative; overflow:hidden; }
+  .card:hover{ border-color:var(--accent); transform:translateY(-2px); }
+  .card .top{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .card .name{ font-size:17px; font-weight:700; letter-spacing:1px; }
+  .badge{ font-size:11px; padding:2px 8px; border-radius:999px; border:1px solid var(--line); color:var(--muted); white-space:nowrap; }
+  .badge.region{ color:#64b5f6; border-color:#2b4a67; }
+  .badge.sar{ color:#ffb74d; border-color:#5c4520; }
+  .hint{ margin:10px 0 12px; font-size:13.5px; color:#cbd5e1; line-height:1.75; min-height:44px; }
+  .hint::before{ content:"“"; color:var(--accent); }
+  .hint::after{ content:"”"; color:var(--accent); }
+  .meta{ display:flex; flex-wrap:wrap; gap:6px 12px; font-size:12px; color:var(--muted); border-top:1px dashed var(--line); padding-top:10px; }
+  .meta b{ color:#dbe6f3; font-weight:600; }
+  .stars{ color:#ffca28; letter-spacing:1px; }
+  .tags{ margin-top:8px; display:flex; flex-wrap:wrap; gap:6px; }
+  .tag{ font-size:11px; padding:2px 8px; border-radius:6px; background:#22304a; color:#9fb6d4; }
+  .footer{ margin-top:34px; display:flex; gap:12px; justify-content:center; }
+  .btn{ display:inline-block; padding:9px 22px; border-radius:8px; border:1px solid var(--line); background:var(--panel2);
+        color:var(--text); text-decoration:none; font-size:14px; cursor:pointer; }
+  .btn:hover{ border-color:var(--accent); }
+  .empty{ color:var(--muted); padding:40px 0; text-align:center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🌍 出境集训 · 国家 / 地区一览</h1>
+    <p class="sub">队伍可以花钱送学生去这些国家 / 地区集训。每个地方的风气、收获与代价都不一样。</p>
+    <div class="notice">
+      这里只写"大致印象"。<b>具体会发生什么，请自行上路体会</b> —— 有些事情说出来就不灵了。
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <span class="lbl">筛选：</span>
+    <button class="tab on" data-filter="all">全部</button>
+    <button class="tab" data-filter="国家">国家</button>
+    <button class="tab" data-filter="地区">地区</button>
+    <button class="tab" data-filter="特别行政区">特别行政区</button>
+  </div>
+
+  <div class="grid" id="country-grid"></div>
+  <div class="empty" id="country-empty" style="display:none">没有符合条件的国家/地区。</div>
+
+  <div class="footer">
+    <a class="btn" href="javascript:window.close()">关闭</a>
+    <a class="btn" href="start.html">回到开始</a>
+  </div>
+</div>
+
+<script src="lib/provinces.js"></script>
+<script src="lib/constants.js"></script>
+<script src="lib/countries.js"></script>
+<script>
+(function(){
+  var ABILITY_NAMES = {
+    thinking: '思维', coding: '编程', mental: '心理',
+    knowledge_ds: '数据结构', knowledge_graph: '图论', knowledge_string: '字符串',
+    knowledge_math: '数学', knowledge_dp: '动态规划'
+  };
+
+  function stars(quality){
+    var q = Number(quality || 0);
+    var n = Math.max(1, Math.min(5, Math.round(q / 1.3 * 5)));
+    var s = "";
+    for (var i = 0; i < 5; i++) s += (i < n ? "★" : "☆");
+    return s + " (" + q.toFixed(1) + ")";
+  }
+
+  function pressureText(f){
+    var v = Number(f);
+    if (!isFinite(v)) return "—";
+    if (v > 1.05) return "偏高 ×" + v.toFixed(2);
+    if (v < 0.95) return "较低 ×" + v.toFixed(2);
+    return "正常 ×" + v.toFixed(2);
+  }
+
+  function badgeClass(type){
+    if (type === '特别行政区') return 'badge sar';
+    if (type === '地区') return 'badge region';
+    return 'badge';
+  }
+
+  function render(filter){
+    var grid = document.getElementById('country-grid');
+    var empty = document.getElementById('country-empty');
+    grid.innerHTML = "";
+    var keys = Object.keys(COUNTRIES).filter(function(k){ return /^\d+$/.test(k); });
+    var shown = 0;
+    keys.forEach(function(k){
+      var c = COUNTRIES[k];
+      if (filter !== 'all' && c.type !== filter) return;
+      shown++;
+      var card = document.createElement('div');
+      card.className = 'card';
+
+      var tags = '';
+      var bonus = c.bonus || {};
+      Object.keys(bonus).forEach(function(bk){
+        var label = ABILITY_NAMES[bk] || bk;
+        var val = Number(bonus[bk]);
+        if (!isFinite(val) || val <= 1) return;
+        tags += '<span class="tag">' + label + ' ×' + val.toFixed(1) + '</span>';
+      });
+
+      card.innerHTML =
+        '<div class="top"><div class="name">' + c.name + '</div>' +
+        '<div class="' + badgeClass(c.type) + '">' + (c.type || '') + '</div></div>' +
+        '<div class="hint">' + (c.hint || '暂无描述') + '</div>' +
+        '<div class="meta">' +
+          '<span>训练质量 <b class="stars">' + stars(c.trainingQuality) + '</b></span>' +
+          '<span>费用 <b>×' + Number(c.costMultiplier || 1).toFixed(2) + '</b></span>' +
+          '<span>压力 ' + pressureText(c.pressureFactor) + '</span>' +
+        '</div>' +
+        (tags ? '<div class="tags">' + tags + '</div>' : '');
+      grid.appendChild(card);
+    });
+    empty.style.display = shown === 0 ? 'block' : 'none';
+  }
+
+  var tabs = document.querySelectorAll(".tab");
+  for (var i = 0; i < tabs.length; i++) {
+    tabs[i].onclick = function(){
+      for (var j = 0; j < tabs.length; j++) tabs[j].classList.remove("on");
+      this.classList.add("on");
+      render(this.dataset.filter);
+    };
+  }
+
+  if (typeof COUNTRIES === "undefined") {
+    document.getElementById("country-grid").innerHTML =
+      '<div class="empty">国家数据加载失败，请检查 lib/countries.js 是否可访问。</div>';
+    return;
+  }
+  render('all');
+})();
+</script>
+</body>
+</html>
