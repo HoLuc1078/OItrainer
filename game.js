@@ -1802,6 +1802,8 @@ function loadGame(){ try{
   window.game = game;
   // 先把随机流接回存档时的位置，后面的补算（如重建本周题目）才和原来一致
   __restoreRngFromGame();
+  // 难度增幅是全局变量，页面刷新后回到基准值，读档时必须按存档里的难度重算一次
+  try{ if(typeof applyDifficultyBalance === 'function') applyDifficultyBalance(game.difficulty); }catch(e){}
   game.facilities = Object.assign(new Facilities(), o.facilities);
   /* 存档迁移：旧版设施(dorm/canteen)转换为新版(fan/network) */
   if(typeof o.facilities.dorm !== 'undefined' && typeof o.facilities.fan === 'undefined'){
@@ -1843,7 +1845,7 @@ function silentLoad(){ try{
   let raw = null;
   try{ raw = sessionStorage.getItem('oi_coach_save'); }catch(e){ raw = null; }
   try{ if(!raw) raw = localStorage.getItem('oi_coach_save'); }catch(e){}
-  if(!raw) return false; let o = JSON.parse(raw); game = Object.assign(new GameState(), o); window.game = game; __restoreRngFromGame(); game.facilities = Object.assign(new Facilities(), o.facilities); if(typeof o.facilities.dorm !== 'undefined' && typeof o.facilities.fan === 'undefined'){ game.facilities.fan = Math.min(o.facilities.dorm || 0, FACILITY_DEFS.fan.maxLevel); } if(typeof o.facilities.canteen !== 'undefined' && typeof o.facilities.network === 'undefined'){ game.facilities.network = 0; } game.facilities.computer_room = 1; game.students = (o.students || []).map(s => { const student = Object.assign(new Student(), s); if(s.talents instanceof Set){ student.talents = new Set(s.talents); } else if(s.talents && Array.isArray(s.talents)){ student.talents = new Set(s.talents); } else if(s.talents && typeof s.talents === 'object'){ student.talents = new Set(Object.keys(s.talents).filter(k => s.talents[k])); } return student; }); __restoreSetFields(game, o); 
+  if(!raw) return false; let o = JSON.parse(raw); game = Object.assign(new GameState(), o); window.game = game; __restoreRngFromGame(); try{ if(typeof applyDifficultyBalance === 'function') applyDifficultyBalance(game.difficulty); }catch(e){} game.facilities = Object.assign(new Facilities(), o.facilities); if(typeof o.facilities.dorm !== 'undefined' && typeof o.facilities.fan === 'undefined'){ game.facilities.fan = Math.min(o.facilities.dorm || 0, FACILITY_DEFS.fan.maxLevel); } if(typeof o.facilities.canteen !== 'undefined' && typeof o.facilities.network === 'undefined'){ game.facilities.network = 0; } game.facilities.computer_room = 1; game.students = (o.students || []).map(s => { const student = Object.assign(new Student(), s); if(s.talents instanceof Set){ student.talents = new Set(s.talents); } else if(s.talents && Array.isArray(s.talents)){ student.talents = new Set(s.talents); } else if(s.talents && typeof s.talents === 'object'){ student.talents = new Set(Object.keys(s.talents).filter(k => s.talents[k])); } return student; }); __restoreSetFields(game, o); 
   
   // 恢复本周题目：如果存档中没有或已失效，重新选择（基础7道+资料库额外题目）
   if (!game.weeklyTasks || !Array.isArray(game.weeklyTasks) || game.weeklyTasks.length === 0) {
@@ -1913,8 +1915,14 @@ function initGame(difficulty, province_choice, student_count, seed){
     }
   }
   
-  if(game.difficulty===1){ game.budget = Math.floor(game.budget * EASY_MODE_BUDGET_MULTIPLIER); }
-  else if(game.difficulty===3){ game.budget = Math.floor(game.budget * HARD_MODE_BUDGET_MULTIPLIER); }
+  // 难度平衡：先按当前难度把全局增幅变量算好，后面所有结算都会自动吃到这档的松紧
+  const __diff = (typeof applyDifficultyBalance === 'function') ? applyDifficultyBalance(game.difficulty) : null;
+  if(__diff){
+    game.budget = Math.floor(game.budget * __diff.budgetMult);
+  } else {
+    if(game.difficulty===1){ game.budget = Math.floor(game.budget * EASY_MODE_BUDGET_MULTIPLIER); }
+    else if(game.difficulty===3){ game.budget = Math.floor(game.budget * HARD_MODE_BUDGET_MULTIPLIER); }
+  }
 
   // 预留：应用省份初始设施加成
   try{ if(typeof applyProvinceInitialFacilities === 'function') applyProvinceInitialFacilities(game, province_choice); }catch(e){}
@@ -1945,7 +1953,9 @@ function initGame(difficulty, province_choice, student_count, seed){
     if(game.province_type==="强省"){ min_val = STRONG_PROVINCE_MIN_ABILITY; max_val = STRONG_PROVINCE_MAX_ABILITY; }
     else if(game.province_type==="弱省"){ min_val = WEAK_PROVINCE_MIN_ABILITY; max_val = WEAK_PROVINCE_MAX_ABILITY; }
     else { min_val = NORMAL_PROVINCE_MIN_ABILITY; max_val = NORMAL_PROVINCE_MAX_ABILITY; }
-    if(game.difficulty===1){ min_val += EASY_MODE_ABILITY_BONUS; max_val += EASY_MODE_ABILITY_BONUS; }
+    const __delta = (typeof getDifficultyBalance === 'function') ? getDifficultyBalance(game.difficulty).abilityDelta : 0;
+    if(__delta !== 0){ min_val += __delta; max_val += __delta; }
+    else if(game.difficulty===1){ min_val += EASY_MODE_ABILITY_BONUS; max_val += EASY_MODE_ABILITY_BONUS; }
     else if(game.difficulty===3){ min_val -= HARD_MODE_ABILITY_PENALTY; max_val -= HARD_MODE_ABILITY_PENALTY; }
     range = { min: min_val, max: max_val };
   }

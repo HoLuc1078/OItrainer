@@ -51,7 +51,7 @@
         <select id="start-diff" style="display:none">
           <option value="1">简单 - 适合初次体验的人</option>
           <option value="2" selected>普通 - 标准游戏体验</option>
-          <option value="3">困难 - 适合寻求挑战的人</option>
+          <option value="3">专家 - 适合寻求挑战的人</option>
         </select>
         <div class="diff-carousel-wrapper">
           <button class="carousel-arrow carousel-arrow-left" id="diff-prev" aria-label="上一个难度">&lt;</button>
@@ -420,12 +420,15 @@
     }
 
     // 根据当前难度计算调整后的经费
+    // 倍率必须与 lib/constants.js 的 DIFFICULTY_BALANCE.budgetMult 保持一致，
+    // 否则这一步的预览会和真正开局时的经费对不上。
+    var DIFF_BUDGET_MULT = { 1: 1.5, 2: 1.0, 3: 0.42 };
     function getAdjustedBudget(baseBudget){
       var diffEl = document.getElementById('start-diff');
       var diff = diffEl ? parseInt(diffEl.value) : 2;
-      if(diff === 1) return Math.floor(baseBudget * 1.5);   // 简单 +50%
-      if(diff === 3) return Math.floor(baseBudget * 0.5);   // 困难 -50%
-      return baseBudget;                                     // 普通不变
+      var mult = DIFF_BUDGET_MULT[diff];
+      if(typeof mult !== 'number') mult = 1.0;
+      return Math.floor(baseBudget * mult);
     }
 
     function handleProvLanguageSwitch(provId){
@@ -448,15 +451,19 @@
 
     // 轮播式难度选择（三卡并排，弹性动画）
     function renderDiffGrid(){
+      // 数值与 lib/constants.js 的 DIFFICULTY_BALANCE 一一对应，改那边记得同步这里
       var defs = [
-        {v:1, label:'简单', desc:'适合初次体验的人', detail:'', stats:[
-          {k:'经费倍率', v:'150%'}, {k:'初始能力', v:'+20'}, {k:'比赛强度', v:'较低'}
+        {v:1, label:'简单', desc:'适合初次体验的人', detail:'钱多一点、起点高一点，玩法节奏和普通档一样。', stats:[
+          {k:'经费倍率', v:'150%'}, {k:'初始能力', v:'+20'}, {k:'训练 / 集训收益', v:'100% / 100%'},
+          {k:'压力增长', v:'100%'}, {k:'分数线 / 题目难度', v:'100% / 100%'}, {k:'花销 / 天赋概率', v:'100% / 200%'}
         ]},
-        {v:2, label:'普通', desc:'标准游戏体验', detail:'', stats:[
-          {k:'经费倍率', v:'100%'}, {k:'初始能力', v:'+0'}, {k:'比赛强度', v:'标准'}
+        {v:2, label:'普通', desc:'标准游戏体验', detail:'魔改版的基准难度，所有系数都是 100%。', stats:[
+          {k:'经费倍率', v:'100%'}, {k:'初始能力', v:'+0'}, {k:'训练 / 集训收益', v:'100% / 100%'},
+          {k:'压力增长', v:'100%'}, {k:'分数线 / 题目难度', v:'100% / 100%'}, {k:'花销 / 天赋概率', v:'100% / 100%'}
         ]},
-        {v:3, label:'专家', desc:'不适合任何人', detail:'', stats:[
-          {k:'经费倍率', v:'50%'}, {k:'初始能力', v:'-20'}, {k:'比赛强度', v:'高'}
+        {v:3, label:'专家', desc:'不适合任何人', detail:'全方位的紧：钱少、起点低、练得慢、压力涨得快、分数线还更高。', stats:[
+          {k:'经费倍率', v:'42%'}, {k:'初始能力', v:'-24'}, {k:'训练 / 集训收益', v:'88% / 90%'},
+          {k:'压力增长', v:'112%'}, {k:'分数线 / 题目难度', v:'105% / 106%'}, {k:'花销 / 天赋概率', v:'108% / 75%'}
         ]}
       ];
       var track = document.getElementById('diff-carousel-track');

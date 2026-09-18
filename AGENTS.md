@@ -32,12 +32,16 @@
 - 或 `npx serve .`
 
 **调试**：F12 打开控制台，全局对象 `game` 直接可读写（例如 `game.budget = 999999`）。
-`debug.js` 里有一批现成的作弊 / 调试函数：`debugzak()`、`Fuck_CCF()`（李欣隆）、
-`chthollySummon()`（珂朵莉）、`kkksc03wzl()`、`debugFacility()`。
+
+- **Dev Tool（推荐）**：控制台输入 `dev_tool()` 打开作弊面板；`dev_tool('help')` 打印命令表；
+  `dev_tool('money', 5000000)` 直接执行；函数式 API 是 `DEV.xxx()`。
+  加新命令见第 5 节。
+- 老式散装函数（`debug.js`）：`debugzak()`、`Fuck_CCF()`（李欣隆）、`chthollySummon()`（珂朵莉）、
+  `kkksc03wzl()`、`debugFacility()`。
 
 **页面入口与 URL 参数**：
 
-- `index.html` —— 菜单 + 更新日志
+- `index.html` —— 菜单 + 更新日志 + 成就查看器（首页「成  就」按钮）
 - `start.html` —— 开局设置（三步向导 + 省份地图）
 - `game.html?new=1&d=&p=&c=&seed=` —— 开局并直接进入游戏
   - `d` 难度 1/2/3，`p` 省份 id 1..33，`c` 初始人数 3..10，`seed` 随机种子
@@ -107,14 +111,15 @@
 
 | 文件 | 作用 |
 | --- | --- |
-| `index.html` | 主入口 / 菜单 / 更新日志。含全屏「矩阵雨」背景动画（纯装饰，放心用 `Math.random`）。 |
+| `index.html` | 主入口 / 菜单 / 更新日志 / **成就查看器**（只读，用 `AchievementManager.renderPanelHtml(null)` 渲染）。含全屏「矩阵雨」背景动画（纯装饰，放心用 `Math.random`）。 |
 | `start.html` | 开局设置：三步向导（难度 → 省份 → 招生）、可交互省份地图（ECharts + `assets/china.json`）、**今日挑战**按钮、对点招生 / 学前培养 / 天赋选择。 |
 | `game.html` | 主游戏界面骨架：顶栏（周数 / 经费 / 声誉 / 天气 / 下场比赛 / 成就徽章）、学生卡片区、周信息、设施状态、训话框、日志、八个行动按钮。**只负责 DOM 结构**，逻辑在 `game.js` / `render.js`。 |
 | `end.html` | 赛季结算页：读取存档与结局原因，渲染时间线、成绩、随机种子、成就面板（两栏 Tab）。 |
 | `shared.html` | 分享结果页：解析别人分享的链接，展示对方那一局的成绩、随机种子、成就数量。 |
 | `country.html` | 🌍 国家 / 地区一览：列出全部出境集训目的地的「传闻」（支持中文 / 拼音首字母 / 英文 / 关键词搜索），**不剧透具体事件**。 |
 | `help.html` / `help.md` | 攻略。`help.md` 是文本版，`help.html` 是网页版。 |
-| `styles.css` | 全站样式。成就面板相关的 `.ach-*` 类（含两栏 Tab、进度条）在文件末尾。 |
+| `styles.css` | 全站样式（游戏内界面）。 |
+| `achievements.css` | 成就面板样式（`.ach-*`，含两栏 Tab、分类胶囊、进度条）。独立成文件是因为 `index.html` 不引 `styles.css`，但同样要展示成就面板。 |
 
 ### 4.2 顶层脚本
 
@@ -124,7 +129,7 @@
 | `render.js` | **主界面渲染**：`renderAll()`、学生卡片、各类弹窗（训练 / 娱乐 / 模拟赛 / 集训 / 出境集训 / 打工 / 加训 / 劝退）、日志与事件卡片、`log()`、赛季结算 `renderEndSummary()`。UI 里触发的玩法动作（加训、打工等）也在这里。 |
 | `events.js` | **随机事件系统**：`EventManager`，注册所有随机事件（天气灾害、赞助、转学生、劝退挽留……）并在每周触发；训话输入（含彩蛋口令）。 |
 | `tutorial.js` | 新手引导：首次进入 `game.html` 时的分步高亮教学，入口是 `window.tutorialManager`（`finish()` 可跳过）。 |
-| `debug.js` | 调试 / 作弊函数：`debugzak()`、`Fuck_CCF()`（李欣隆）、`chthollySummon()`（珂朵莉）、`kkksc03wzl()`、`debugFacility()`。文件末尾有一段作者留言。 |
+| `debug.js` | 调试 / 作弊：`debugzak()`、`Fuck_CCF()`（李欣隆）、`chthollySummon()`（珂朵莉）、`kkksc03wzl()`、`debugFacility()`；以及 **Dev Tool** —— 控制台输入 `dev_tool()` 打开的作弊面板（`DEV.xxx()` 为函数式 API，命令表见 `DEV_GROUPS`）。文件末尾有一段作者留言。 |
 
 ### 4.3 `lib/` — 模块（加载顺序见 `game.html` 底部的 `<script>` 列表）
 
@@ -134,7 +139,7 @@
 | `chinese-convert.js` | 简繁转换（香港 / 澳门开局时启用）。 |
 | `facilities.js` | 设施系统：机房 / 计算机 / 网络 / 电扇 / 空调 / 资料库的等级、效果、升级费用、维护费与升级 UI。`FACILITY_DEFS` 在这里。 |
 | `provinces.js` | 省份数据（33 个）：强弱属性、初始经费、训练质量、气候关联、初始设施，以及 `getProvinceBaseComfort()` / `getProvinceAbilityRange()`。 |
-| `constants.js` | **全局数值平衡总开关**：各类概率、阈值、倍率、「全局增幅变量」（训练收益 / 压力 / 分数线 / 花销）、退队保护阈值、比赛与题目常量。调平衡先来这里。 |
+| `constants.js` | **全局数值平衡总开关**：各类概率、阈值、倍率、退队保护阈值、比赛与题目常量；以及 **`DIFFICULTY_BALANCE` 难度档位表** + `applyDifficultyBalance()`（把档位系数乘到全局增幅变量上）。调平衡先来这里。⚠️ 开局与读档后都必须调用一次 `applyDifficultyBalance()`。 |
 | `countries.js` | 出境集训数据：56 个国家 / 地区的费用倍率与**各国专属彩蛋效果**（`OVERSEAS_COUNTRY_EFFECTS`）、**意外事件池**（`OVERSEAS_INCIDENTS`）、按学生触发的概率 `CHUJINGFAZHI`、搜索索引。 |
 | `utils.js` | **随机数基础设施**（`SeededRandom` / `getRandom` / `setRandomSeed` / `getRandomState` / `withRandomSeed` …）+ 数值工具（`clamp` / `sigmoid` / `uniformInt` / `normal`）+ 字母等级 `getLetterGrade` + 姓名生成（含少数民族姓名池）+ **今日挑战参数** `getDailyChallengeParams()`。 |
 | `models.js` | 数据模型：`Student`（能力 / 知识点 / 压力 / 舒适度 / 天赋 / 比赛中的临时修正）、`GameState`（全局状态 + `stats` 统计 + 随机种子字段 + `bumpStat` / `maxStat` / `minStat`）、比赛日程构建、旧存档迁移 `migrateStudentIdentities()`。 |
@@ -176,7 +181,9 @@
 | 给成就加新统计 | 在 `lib/models.js` 的 `GameState.stats` 加字段，并用 `trackAction()` / `game.bumpStat()` / `game.maxStat()` 在**真正执行操作**的地方埋点（别在打开弹窗时埋）。 |
 | 加一个出境国家 / 彩蛋 | `lib/countries.js`：`COUNTRIES` 加条目，`OVERSEAS_COUNTRY_EFFECTS` 加同名函数；`country.html` 同步加「传闻」。 |
 | 加一个随机事件 | `events.js` 的 `registerDefaultEvents()`。 |
-| 调数值平衡 | `lib/constants.js`（优先用「全局增幅变量」），个别值在 `lib/provinces.js` / `lib/facilities.js` / `lib/countries.js`。 |
+| 调数值平衡 | `lib/constants.js`（优先用「全局增幅变量」与 `DIFFICULTY_BALANCE`），个别值在 `lib/provinces.js` / `lib/facilities.js` / `lib/countries.js`。 |
+| 给某一档难度调松紧 | `lib/constants.js` 的 `DIFFICULTY_BALANCE`；`start.html` 的难度卡片文案与 `DIFF_BUDGET_MULT` 记得同步。 |
+| 加一条作弊命令 | `debug.js` 的 `DEV` 里加方法，再往 `DEV_GROUPS` 补一个按钮；面板与控制台入口会自动带上。 |
 | 加一场比赛 | `lib/constants.js` 的 `COMPETITION_SCHEDULE` / `COMPETITION_ORDER`。 |
 | 改界面 | 结构在 `game.html`，渲染在 `render.js`，样式在 `styles.css`。 |
 

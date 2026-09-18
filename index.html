@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>OI 教练模拟器 — 主菜单</title>
+  <link rel="stylesheet" href="achievements.css">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; }
@@ -258,7 +259,7 @@
     <p class="menu-subtitle">&lt;OI Coach Simulator&gt;</p>
     <p class="menu-flavor">二NOIP，你被黄紫黑黑创飞原地AFO。一觉醒来，你发现你坐在机房前，成为了你们学校信息学竞赛的总教练。回想起之前构造题没checker，模拟赛没大样例，一个月没有半天假期的训练生活。你决定要改变这一切。</p>
     <div class="menu-btn-wrap"><a href="start.html" class="menu-btn primary">开始游戏</a></div>
-    <div class="menu-btn-wrap"><button class="menu-btn" disabled title="即将推出">成  就</button></div>
+    <div class="menu-btn-wrap"><button class="menu-btn" id="menu-achievements" title="查看跨局累计的成就（存在浏览器本地，不随存档走）">成  就</button></div>
     <div class="menu-btn-wrap"><button class="menu-btn" disabled title="即将推出">清除存档</button></div>
   </div>
   <div class="menu-right">
@@ -271,6 +272,78 @@
     作者 @Dreamers-seve · 洛谷: <a href="https://www.luogu.com.cn/user/668972" target="_blank" rel="noopener">https://www.luogu.com.cn/user/668972</a> · GitHub: <a href="https://github.com/seve42/OItrainer" target="_blank" rel="noopener">https://github.com/seve42/OItrainer</a>
     <br>魔改 @HoLuc1078 · 洛谷: <a href="https://www.luogu.com.cn/user/589190" target="_blank" rel="noopener">https://www.luogu.com.cn/user/589190</a> · GitHub: <a href="https://github.com/holuc1078/OItrainer" target="_blank" rel="noopener">https://github.com/holuc1078/OItrainer</a>
   </footer>
+
+  <!-- 成就查看器（主菜单里也能看跨局累计的成就） -->
+  <div id="ach-viewer" class="ach-viewer" aria-hidden="true">
+    <div class="ach-viewer-sheet" role="dialog" aria-label="成就">
+      <div class="ach-viewer-bar">
+        <span class="ach-viewer-title">🏅 成就</span>
+        <button type="button" class="ach-viewer-close" id="ach-viewer-close">关闭 ✕</button>
+      </div>
+      <div class="ach-viewer-body" id="ach-viewer-body"></div>
+    </div>
+  </div>
+
+  <style>
+    /* ===== 成就查看器（只属于主菜单，深色主题） ===== */
+    .ach-viewer {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(6, 14, 28, 0.72);
+      backdrop-filter: blur(3px);
+    }
+    .ach-viewer.open { display: flex; }
+    .ach-viewer-sheet {
+      width: min(1000px, 100%);
+      max-height: 100%;
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+      color: #1f2937;
+      border-radius: 14px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+      overflow: hidden;
+    }
+    .ach-viewer-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 18px;
+      border-bottom: 1px solid #e5e9f0;
+      background: linear-gradient(120deg, rgba(245, 158, 11, 0.12), rgba(236, 72, 153, 0.10));
+      flex: 0 0 auto;
+    }
+    .ach-viewer-title { font-size: 16px; font-weight: 700; color: #333; }
+    .ach-viewer-close {
+      appearance: none;
+      border: 1px solid #dbe3ec;
+      background: #fff;
+      color: #475569;
+      font-size: 13px;
+      padding: 5px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .ach-viewer-close:hover { background: #f1f5f9; }
+    .ach-viewer-body {
+      padding: 14px 18px 20px;
+      overflow-y: auto;
+      flex: 1 1 auto;
+    }
+    .ach-viewer-error { color: #b91c1c; font-size: 14px; padding: 20px 0; text-align: center; }
+    .ach-viewer-hint { font-size: 12px; color: #94a3b8; margin-top: 14px; text-align: center; }
+    @media (max-width: 640px) {
+      .ach-viewer { padding: 10px; }
+      .ach-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+    }
+  </style>
 
   <!-- 斜向代码雨动画（canvas + requestAnimationFrame，限帧25fps，CSS旋转实现斜向） -->
   <script>
@@ -434,5 +507,48 @@
       }catch(e){}
     })();
   </script>
+  <!-- 成就系统：主菜单只读展示（逻辑在 lib/achievements.js，数据在 localStorage） -->
+  <script src="lib/climate.js"></script>
+  <script src="lib/facilities.js"></script>
+  <script src="lib/provinces.js"></script>
+  <script src="lib/constants.js"></script>
+  <script src="lib/utils.js"></script>
+  <script src="lib/achievements.js"></script>
+  <script>
+    (function () {
+      var btn = document.getElementById('menu-achievements');
+      var viewer = document.getElementById('ach-viewer');
+      var body = document.getElementById('ach-viewer-body');
+      var closeBtn = document.getElementById('ach-viewer-close');
+      if (!btn || !viewer || !body) return;
+
+      function renderPanel() {
+        try {
+          if (window.AchievementManager && typeof window.AchievementManager.renderPanelHtml === 'function') {
+            body.innerHTML = window.AchievementManager.renderPanelHtml(null) +
+              '<div class="ach-viewer-hint">主菜单只看不改：想解锁就去打一局（成就记录跨局保留，不会因为换存档而丢失）。</div>';
+            return;
+          }
+        } catch (e) { console.error('renderPanel failed', e); }
+        body.innerHTML = '<p class="ach-viewer-error">成就系统加载失败，请刷新页面重试。</p>';
+      }
+
+      function open() {
+        renderPanel();
+        viewer.classList.add('open');
+        viewer.setAttribute('aria-hidden', 'false');
+      }
+      function close() {
+        viewer.classList.remove('open');
+        viewer.setAttribute('aria-hidden', 'true');
+      }
+
+      btn.addEventListener('click', open);
+      closeBtn && closeBtn.addEventListener('click', close);
+      viewer.addEventListener('click', function (e) { if (e.target === viewer) close(); });
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+    })();
+  </script>
+
 </body>
 </html>
