@@ -1,0 +1,4 @@
+chore: 移除误提交的临时文件并补充 .gitignore
+
+- 删除上一次提交里被误加入的 .git-msg2.tmp
+- .gitignore 增加 .tmp_* / .git-*.tmp，避免本地调试用的临时脚本与提交信息草稿再次入库
