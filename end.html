@@ -109,7 +109,7 @@
                 <button class="btn btn-ghost" id="end-back">回到开始</button>
                 <button class="btn" id="end-share" style="background:#2b6cb0;color:white;">分享结果</button>
                 <button class="btn" id="end-playagain">再玩一次</button>
-                <button class="btn" id="end-country" style="background:#4caf50;color:white;">查看国家</button>
+                <button class="btn" id="end-country" style="background:#4caf50;color:white;">国家 / 地区</button>
                 <a class="btn" id="end-help" href="help.html" target="_blank" rel="noopener">通关困难？查看攻略</a>
             </div>
         </div>
@@ -123,13 +123,14 @@
 <script src="lib/utils.js"></script>
 <script src="lib/models.js"></script>
 <script src="lib/talent.js"></script>
+<script src="lib/achievements.js"></script>
 <script src="lib/share.js"></script>
 <script src="game.js"></script>
 <script src="render.js"></script>
 <script src="debug.js"></script>
 <script>
   document.getElementById('end-back').onclick = ()=>{ window.location.href = 'start.html'; };
-  // 查看国家 / 地区一览
+  // 国家 / 地区一览
   const endCountryBtn = document.getElementById('end-country');
   if(endCountryBtn){ endCountryBtn.onclick = ()=>{ window.open('country.html', '_blank'); }; }
   const endPlayAgainBtn = document.getElementById('end-playagain');

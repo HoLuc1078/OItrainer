@@ -135,8 +135,16 @@ function Fuck_CCF() {
         "摸鱼大师",       // 训练强度>80时50%概率取消压力增加
         "抗压奇才",       // 压力增加超10时减半
         "睡觉也在想题",   // 放假结束随机提升知识点+压力-5
+        // ===== 隐藏天赋（名字都是梗，效果请自行体会）=====
         "嬲选手",
-        "珂朵莉"
+        "珂朵莉",
+        "世界上最幸福的女孩",
+        "样例过了就是过了",
+        "暴力出奇迹",
+        "你怎么知道我 AK 了",
+        "稳如老狗",
+        "Deadline 是第一生产力",
+        "欧皇"
     ];
     positiveTalents.forEach(talent => superStudent.addTalent(talent));
 
@@ -144,6 +152,7 @@ function Fuck_CCF() {
     game.students.push(superStudent);
     console.log('lxl 顺着味就来了');
     log('lxl顺着味就来了');
+    try{ if(window.AchievementManager) window.AchievementManager.checkAll(game); }catch(e){}
     // 授予所有比赛晋级资格（当前学期和下学期）
     for (let halfIndex = 0; halfIndex <= 1; halfIndex++) {
         if (!game.qualification[halfIndex]) {
@@ -162,14 +171,68 @@ function Fuck_CCF() {
         renderAll();
     }
 }
+/**
+ * 超级学生：珂朵莉
+ * 触发方式：在训话框里输入「chtholly」（每局仅一次，和「李欣隆」共用同一份额度）
+ */
+function chthollySummon() {
+    if (typeof game === 'undefined' || !game) {
+        console.error('游戏未初始化');
+        return;
+    }
+
+    const MAXV = 2147483647;
+    const chtholly = new Student('珂朵莉', MAXV, MAXV, MAXV);
+    chtholly.knowledge_ds = MAXV;
+    chtholly.knowledge_graph = MAXV;
+    chtholly.knowledge_string = MAXV;
+    chtholly.knowledge_math = MAXV;
+    chtholly.knowledge_dp = MAXV;
+    chtholly.pressure = 0;
+    chtholly.comfort = 100;
+    chtholly.sick_weeks = 0;
+    chtholly.active = true;
+
+    [
+        '珂朵莉',
+        '世界上最幸福的女孩',
+        '嬲选手',
+        '样例过了就是过了',
+        '暴力出奇迹',
+        '你怎么知道我 AK 了',
+        '稳如老狗',
+        'Deadline 是第一生产力',
+        '欧皇'
+    ].forEach(function (t) { chtholly.addTalent(t); });
+
+    game.students.push(chtholly);
+    game.hasChtholly = true;
+    log('如果幸福有颜色，那一定是被终末之红染尽的苍蓝。');
+    try { if (typeof pushEvent === 'function') pushEvent({ name: '珂朵莉', description: '「我永远喜欢珂朵莉。」', week: game.week }); } catch (e) { }
+
+    // 授予所有比赛晋级资格（当前学期和下学期）
+    for (let halfIndex = 0; halfIndex <= 1; halfIndex++) {
+        if (!game.qualification[halfIndex]) game.qualification[halfIndex] = {};
+        for (let compName of COMPETITION_ORDER) {
+            if (!game.qualification[halfIndex][compName]) game.qualification[halfIndex][compName] = new Set();
+            game.qualification[halfIndex][compName].add(chtholly.name);
+        }
+    }
+
+    try { if (window.AchievementManager) window.AchievementManager.checkAll(game); } catch (e) { }
+    if (typeof renderAll === 'function') renderAll();
+}
+
 // 下面的代码是我练习 JS 自己写的，厉害吧
 function kkksc03wzl() {
     if (typeof game === 'undefined' || !game) {
         console.error('游戏未初始化');
         return;
     }
-    const wzl = new Student("wzl（女队）", 2919, 1929, 9999);
+    // 注意：女队只是"标记"，不能改名字 —— 名字是身份键，改了会让这个人的履历全丢
+    const wzl = new Student("wzl", 2919, 1929, 9999);
     wzl.femaleTeamPath = true;
+    wzl.femaleTeamWeek = game.week;
     wzl.knowledge_dp = 114514;
     wzl.knowledge_ds = 998244353;
     wzl.knowledge_graph = 1929;
@@ -179,7 +242,9 @@ function kkksc03wzl() {
     wzl.pressure = 0;
     wzl.addTalent("世界上最幸福的女孩");
     wzl.addTalent("嬲选手");
+    wzl.addTalent("你怎么知道我 AK 了");
     game.students.push(wzl);
+    try{ if(window.AchievementManager) window.AchievementManager.checkAll(game); }catch(e){}
     //好吧，下面还是得CV
     // 授予所有比赛晋级资格（当前学期和下学期）
     for (let halfIndex = 0; halfIndex <= 1; halfIndex++) {

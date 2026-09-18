@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>查看国家 · OI 教练模拟器</title>
+<title>国家 / 地区 · OI 教练模拟器</title>
 <style>
   :root{ --bg:#0f1420; --panel:#171d2b; --panel2:#1e2637; --line:#2a3446; --text:#e6ecf5; --muted:#94a3b8; --accent:#4caf50; }
   *{ box-sizing:border-box; }
@@ -42,6 +42,11 @@
         color:var(--text); text-decoration:none; font-size:14px; cursor:pointer; }
   .btn:hover{ border-color:var(--accent); }
   .empty{ color:var(--muted); padding:40px 0; text-align:center; }
+  .searchbox{ position:relative; flex:1 1 260px; min-width:220px; }
+  .searchbox input{ width:100%; padding:8px 12px 8px 34px; border-radius:999px; border:1px solid var(--line);
+        background:var(--panel); color:var(--text); font-size:13px; outline:none; }
+  .searchbox input:focus{ border-color:var(--accent); }
+  .searchbox::before{ content:"🔍"; position:absolute; left:12px; top:50%; transform:translateY(-50%); font-size:13px; opacity:.8; }
 </style>
 </head>
 <body>
@@ -60,6 +65,9 @@
     <button class="tab" data-filter="国家">国家</button>
     <button class="tab" data-filter="地区">地区</button>
     <button class="tab" data-filter="特别行政区">特别行政区</button>
+    <div class="searchbox">
+      <input type="text" id="country-search" placeholder="搜索国家 / 地区（中文名、拼音首字母、英文名、关键词）" autocomplete="off" />
+    </div>
   </div>
 
   <div class="grid" id="country-grid"></div>
@@ -104,7 +112,19 @@
     return 'badge';
   }
 
-  function render(filter){
+  var currentFilter = 'all';
+  var currentQuery = '';
+
+  function searchHaystack(name, c){
+    var extra = (typeof countryPinyin === 'function') ? countryPinyin(name) : '';
+    return [name, c.type || '', c.hint || '', extra].join(' ').toLowerCase();
+  }
+
+  function render(filter, query){
+    if (typeof filter === 'string') currentFilter = filter;
+    if (typeof query === 'string') currentQuery = query;
+    filter = currentFilter;
+    var q = String(currentQuery || '').trim().toLowerCase();
     var grid = document.getElementById('country-grid');
     var empty = document.getElementById('country-empty');
     grid.innerHTML = "";
@@ -113,6 +133,7 @@
     keys.forEach(function(k){
       var c = COUNTRIES[k];
       if (filter !== 'all' && c.type !== filter) return;
+      if (q && searchHaystack(c.name, c).indexOf(q) < 0) return;
       shown++;
       var card = document.createElement('div');
       card.className = 'card';
@@ -147,6 +168,14 @@
       for (var j = 0; j < tabs.length; j++) tabs[j].classList.remove("on");
       this.classList.add("on");
       render(this.dataset.filter);
+    };
+  }
+
+  var searchInput = document.getElementById("country-search");
+  if (searchInput) {
+    searchInput.oninput = function(){
+      currentQuery = this.value || '';
+      render();
     };
   }
 

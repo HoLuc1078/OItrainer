@@ -653,17 +653,27 @@ function simulateHiddenMockScore(s, diffIdx){
   return total;
 }
 
-function computeOutingCostQuadratic(difficulty_choice, province_choice, participantCount){
+/**
+ * 集训费用（二次型：基础费 + 每名学生固定开销 + 难度附加费）。
+ * @param {number} difficulty_choice 1 基础班 / 2 提高班 / 3 冲刺班
+ * @param {number|string} province_choice 国内集训时是省份 id；出境集训时为国家 id
+ * @param {number} participantCount 参加人数
+ * @param {number} [costMultiplier] 出境集训时传入该国家 / 地区的费用倍率。
+ *        传了它就说明这是"出境"：不再按省份强弱调整，而是按国家费用倍率调整。
+ *        （此前出境集训误用了同 id 的国内省份类型来算钱，导致国家自身的 costMultiplier 完全没生效）
+ */
+function computeOutingCostQuadratic(difficulty_choice, province_choice, participantCount, costMultiplier){
   const DIFF_COST_PENALTY = {1:100, 2:300, 3:600};
   const base = (difficulty_choice === 2) ? OUTFIT_BASE_COST_INTERMEDIATE : 
                (difficulty_choice === 3) ? OUTFIT_BASE_COST_ADVANCED : 
                OUTFIT_BASE_COST_BASIC;
-  const target = PROVINCES[province_choice] || {type: '普通省'};
+  const isOverseas = (typeof costMultiplier === 'number') && isFinite(costMultiplier) && costMultiplier > 0;
+  const target = isOverseas ? null : (PROVINCES[province_choice] || {type: '普通省'});
   
   let adjustedBase = base;
-  if (target.type === '强省') {
+  if (target && target.type === '强省') {
     adjustedBase = Math.floor(adjustedBase * STRONG_PROVINCE_COST_MULTIPLIER);
-  } else if (target.type === '弱省') {
+  } else if (target && target.type === '弱省') {
     adjustedBase = Math.floor(adjustedBase * WEAK_PROVINCE_COST_MULTIPLIER);
   }
 
@@ -674,7 +684,8 @@ function computeOutingCostQuadratic(difficulty_choice, province_choice, particip
     const rep = (typeof game !== 'undefined' && game && typeof game.reputation === 'number') 
       ? clamp(game.reputation, 0, 100) 
       : 0;
-    const raw = Math.max(0, Math.floor(adjustedBase + 18000 * n + diffPenalty));
+    let raw = Math.max(0, Math.floor(adjustedBase + 18000 * n + diffPenalty));
+    if (isOverseas) raw = Math.max(0, Math.floor(raw * costMultiplier));
     
   const maxDiscount = (typeof OUTFIT_REPUTATION_DISCOUNT !== 'undefined') ? OUTFIT_REPUTATION_DISCOUNT : 0.30;
   const multiplier = (typeof OUTFIT_REPUTATION_DISCOUNT_MULTIPLIER !== 'undefined') ? OUTFIT_REPUTATION_DISCOUNT_MULTIPLIER : 1.0;
@@ -729,7 +740,11 @@ function outingTrainingWithSelection(difficulty_choice, province_choice, selecte
     }
   }catch(e){ console.error('collect outing cost reductions error', e); }
 
-  if(game.budget < final_cost){ alert("经费不足，无法外出集训！"); return; }
+  if(game.budget < final_cost){
+    // 经费不足：集训取消，但这一周照样被折腾掉了（行动值照扣）
+    consumeActionOnFailedTraining('外出集训', `预算需要 ¥${final_cost}，当前只有 ¥${game.budget}`, target.name);
+    return;
+  }
   game.recordExpense(final_cost, `外出集训：${target.name}`);
   log(`外出集训：${target.name} (${target.type})，难度:${difficulty_choice}，参与人数:${participantCount}，费用 ¥${final_cost}`);
 
@@ -826,6 +841,36 @@ function outingTrainingWithSelection(difficulty_choice, province_choice, selecte
   if(__before && __after) __summarizeSnapshot(__before, __after, `外出集训：${target.name} 难度${difficulty_choice}`);
 }
 
+/**
+ * 经费不足导致集训/出境集训失败时的统一处理。
+ * 关键点：失败的尝试同样要消耗行动值（推进一周），否则玩家可以无限白嫖"看一眼价格"。
+ * @param {string} label 行动名称（用于提示与日志）
+ * @param {string} detail 具体缺少多少经费
+ * @param {string} targetName 地点名
+ */
+function consumeActionOnFailedTraining(label, detail, targetName) {
+    const msg = `经费不足，${label}失败！${detail ? '（' + detail + '）' : ''}`;
+    try { if (window.pushEvent) window.pushEvent({ name: label + '失败', description: `${msg} 这一周白折腾了，行动值已消耗。`, week: game.week }); } catch (e) { }
+    try { log(`${label}失败：${detail}，行动值已消耗（推进一周）`); } catch (e) { }
+    try {
+        if (window.toastManager && typeof window.toastManager.show === 'function') window.toastManager.show(msg + ' 行动值已消耗', 'warning');
+        else alert(msg + '\n这一周依然过去了，行动值已消耗。');
+    } catch (e) { try { alert(msg); } catch (e2) { } }
+    try { closeModal(); } catch (e) { }
+    game.weeks_since_entertainment = Number(game.weeks_since_entertainment || 0) + 1;
+    // 如果当前还有未处理的事件卡片，safeWeeklyUpdate 会被拦住；
+    // 这时把"这一次失败的代价"记成欠账，等下一次真正推进周数时一起补扣，避免白嫖。
+    let blockedByEvents = false;
+    try { blockedByEvents = (typeof hasPendingRequiredEvents === 'function') && hasPendingRequiredEvents(); } catch (e) { blockedByEvents = false; }
+    if (blockedByEvents) {
+        game.__failedActionWeekDebt = Number(game.__failedActionWeekDebt || 0) + 1;
+        try { log('还有未处理的事件卡片，本次失败的代价会在事件处理完后一并扣除。'); } catch (e) { }
+    } else {
+        try { safeWeeklyUpdate(1); } catch (e) { console.error('consumeActionOnFailedTraining weekly update failed', e); }
+    }
+    try { if (typeof renderAll === 'function') renderAll(); } catch (e) { }
+}
+
 function overseasTrainingWithSelection(difficulty_choice, country_choice, selectedNames, inspireTalents) {
     const target = COUNTRIES[country_choice];
     const __before = typeof __createSnapshot === 'function' ? __createSnapshot() : null;
@@ -846,8 +891,8 @@ function overseasTrainingWithSelection(difficulty_choice, country_choice, select
     console.log(`[DEBUG] 记录境外集训活动: ${target.name}, 难度${difficulty_choice}, 周${game.week}`);
     const selectedStudents = game.students.filter(s => s && s.active && selectedNames.includes(s.name));
     const participantCount = selectedStudents.length;
-    // 出境集训基础费用是国内的1.5倍
-    let final_cost = computeOutingCostQuadratic(difficulty_choice, country_choice, participantCount) * 1.5;
+    // 出境集训基础费用是国内的1.5倍，再乘以该国家 / 地区的费用倍率
+    let final_cost = computeOutingCostQuadratic(difficulty_choice, country_choice, participantCount, Number(target.costMultiplier) || 1.0) * 1.5;
 
     inspireTalents = inspireTalents || [];
     // 隐藏天赋激发费用更高（20000/个）
@@ -884,9 +929,40 @@ function overseasTrainingWithSelection(difficulty_choice, country_choice, select
         }
     } catch (e) { console.error('collect overseas cost reductions error', e); }
 
-    if (game.budget < final_cost) { alert("经费不足，无法出境集训！"); return; }
+    // 港澳特例：在港澳本地上学，送学生去港澳集训就是"隔壁串个门"，不收路费
+    const __homeIsGangAo = (game.province_name === '香港' || game.province_name === '澳门');
+    const __targetIsGangAo = (target.name === '香港' || target.name === '澳门');
+    if (__homeIsGangAo && __targetIsGangAo) {
+        const __tripCost = final_cost - talentInspireCost;
+        if (__tripCost > 0) {
+            final_cost -= __tripCost;
+            log(`港澳本地上学，前往${target.name}集训免收路费（-¥${__tripCost}）`);
+        }
+    }
+
+    const __costMult = (typeof COST_MULTIPLIER !== 'undefined' ? COST_MULTIPLIER : 1.0);
+    const __realCost = Math.floor(final_cost * __costMult);
+    if (game.budget < __realCost) {
+        // 经费不足：出境失败，但这一周照样搭进去了（行动值照扣）
+        try {
+            if (!game.stats) game.stats = {};
+            game.stats.overseasFailures = Number(game.stats.overseasFailures || 0) + 1;
+        } catch (e) { }
+        consumeActionOnFailedTraining('出境集训', `前往${target.name}需要 ¥${__realCost}，当前只有 ¥${game.budget}`, target.name);
+        try { if (window.AchievementManager) window.AchievementManager.checkAll(game); } catch (e) { }
+        return;
+    }
     game.recordExpense(final_cost, `出境集训：${target.name}`);
-    log(`出境集训：${target.name} (${target.type})，难度:${difficulty_choice}，参与人数:${participantCount}，费用 ¥${final_cost}`);
+    log(`出境集训：${target.name} (${target.type})，难度:${difficulty_choice}，参与人数:${participantCount}，费用 ¥${__realCost}`);
+
+    // 统计信息（隐藏成就用）
+    try {
+        if (!game.stats) game.stats = {};
+        game.stats.overseasTrips = Number(game.stats.overseasTrips || 0) + 1;
+        if (!Array.isArray(game.stats.overseasCountries)) game.stats.overseasCountries = [];
+        if (game.stats.overseasCountries.indexOf(target.name) < 0) game.stats.overseasCountries.push(target.name);
+        game.stats.maxOverseasCost = Math.max(Number(game.stats.maxOverseasCost || 0), __realCost);
+    } catch (e) { }
 
     const DIFFIDX_MAP = { 1: 0, 2: 1, 3: 4 };
     const diffIdxForHidden = DIFFIDX_MAP[difficulty_choice] || 0;
@@ -988,15 +1064,33 @@ function overseasTrainingWithSelection(difficulty_choice, country_choice, select
 
     const __after = __createSnapshot?.();
     if (__before && __after) __summarizeSnapshot(__before, __after, `出境集训：${target.name} 难度${difficulty_choice}`);
-    // 国家/地区专属事件：具体效果见 lib/countries.js 的 OVERSEAS_COUNTRY_EFFECTS
-    // CHUJINGFAZHI 为触发概率（当前 >1，即必定触发一次）
-    if (Math.random() < CHUJINGFAZHI) {
-        try {
-            if (typeof applyOverseasCountryEffect === 'function') {
-                applyOverseasCountryEffect(target.name, selectedNames);
+    // 国家/地区专属事件：具体效果见 lib/countries.js 的 OVERSEAS_COUNTRY_EFFECTS。
+    // 注意：这里是"按学生"触发的 —— 每名参加集训的学生各自掷一次骰子（CHUJINGFAZHI），
+    // 所以一次集训可能有多人分别遇到不同的事，也可能一个人都没遇上。
+    try {
+        if (typeof applyOverseasCountryEffect === 'function') {
+            applyOverseasCountryEffect(target.name, selectedNames);
+        }
+    } catch (e) { console.error('overseas country effect failed', e); }
+
+    // 出境集训的意外（负面事件）：出门在外不可能事事顺心
+    try {
+        if (typeof applyOverseasIncident === 'function') {
+            const incidentResult = applyOverseasIncident(target.name, selectedNames);
+            const incidentCount = Number((incidentResult && incidentResult.count) || 0);
+            if (incidentCount > 0) {
+                if (!game.stats) game.stats = {};
+                game.stats.maxIncidentsInTrip = Math.max(Number(game.stats.maxIncidentsInTrip || 0), incidentCount);
             }
-        } catch (e) { console.error('overseas country effect failed', e); }
-    }
+        }
+    } catch (e) { console.error('overseas incident failed', e); }
+
+    // 统计 + 隐藏成就
+    try {
+        if (!game.stats) game.stats = {};
+        if (game.budget < 5000) game.stats.almostBrokeOverseas = true;
+    } catch (e) { }
+    try { if (window.AchievementManager) window.AchievementManager.checkAll(game); } catch (e) { }
 
     // 原有的事件检查
     try { checkRandomEvents(); } catch (e) { console.error('post-overseas-training checkRandomEvents failed', e); }
@@ -1053,6 +1147,15 @@ function checkRandomEvents(){
 }
 
 function weeklyUpdate(weeks=1){
+  // 补扣"失败行动"欠下的周数（例如经费不足导致集训失败，但当时被事件卡片拦住了推进）
+  try{
+    const debt = Number(game && game.__failedActionWeekDebt || 0);
+    if(debt > 0){
+      weeks = Number(weeks || 0) + debt;
+      game.__failedActionWeekDebt = 0;
+      try{ log(`补扣 ${debt} 周（此前失败的集训行动值）`); }catch(e){}
+    }
+  }catch(e){}
   try{
     if(hasPendingRequiredEvents()){
       const msg = '存在未处理的事件卡片，请先处理所有可选择的事件再进行回合推进。';
@@ -1228,7 +1331,10 @@ function weeklyUpdate(weeks=1){
   if (checkAndTriggerEnding()) {
     return;
   }
-  
+
+  // 隐藏成就：每周都扫一遍（生病、压力、集邮之类的条件随时可能满足）
+  try{ if(window.AchievementManager) window.AchievementManager.checkAll(game); }catch(e){}
+
   renderAll();
 }
 
@@ -1380,6 +1486,12 @@ function triggerGameEnding(reason) {
   try {
     game.seasonEndTriggered = true;
     const normalized = reason;
+    // 隐藏成就：破产也是一种结局
+    try {
+      if (!game.stats) game.stats = {};
+      if (normalizeEndingReason(normalized) === '经费不足') game.stats.bankruptEnding = true;
+      try { if (window.AchievementManager) window.AchievementManager.checkAll(game); } catch (e) { }
+    } catch (e) { }
     pushEvent({ 
       name: '游戏结束', 
       description: `游戏结束原因：${normalized}`, 
@@ -1523,6 +1635,9 @@ function loadGame(){ try{
     }
   }
   
+  // 存档兼容处理：隐藏天赋改名 + 女队学生身份修复（找回被改名冲掉的比赛履历）
+  try{ if(typeof migrateStudentIdentities === 'function') migrateStudentIdentities(game); }catch(e){ console.error('migrateStudentIdentities failed in loadGame', e); }
+  try{ if(window.AchievementManager) window.AchievementManager.checkAll(game); }catch(e){}
   renderAll(); alert("已载入存档"); }catch(e){ alert("载入失败："+e); } }
 
 function silentLoad(){ try{ 
@@ -1539,6 +1654,8 @@ function silentLoad(){ try{
     }
   }
   
+  try{ if(typeof migrateStudentIdentities === 'function') migrateStudentIdentities(game); }catch(e){}
+  try{ if(window.AchievementManager) window.AchievementManager.checkAll(game); }catch(e){}
   return true; }catch(e){ return false; } }
 
 function startFromStartPage(){

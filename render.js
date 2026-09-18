@@ -122,7 +122,19 @@ const QUOTES = [
     "【数据删除】",
     "洛谷将会臭名昭著",
     "rp++",
-    "n 方过百万，暴力碾标算"
+    "n 方过百万，暴力碾标算",
+    "样例过了就是过了",
+    "先交一发，反正不花钱",
+    "本地能过，评测机不能过，那是评测机的问题",
+    "骗分过样例，暴力出奇迹",
+    "这题我见过，在梦里",
+    "比赛结束前五分钟，代码突然就会写了",
+    "测完大样例就交，这是对自己的信任",
+    "退役是不可能退役的，这辈子都不可能退役的",
+    "OI 只有一次和无数次",
+    "你说的对，但是这道题的数据范围是 1e5",
+    "不开 long long 见祖宗",
+    "分数不重要，重要的是参与（骗分）精神"
 ];
 
 /* =========== UI 辅助 =========== */
@@ -357,6 +369,8 @@ function showChoiceModal(evt){
 }
 
 function renderAll(){
+  // 隐藏成就徽章（顶栏计数）
+  try{ if(window.AchievementManager && typeof window.updateAchievementBadge === 'function') window.updateAchievementBadge(); }catch(e){}
   if(!document.getElementById('header-week')) return;
   
   // 清理旧的事件监听器标记
@@ -475,34 +489,10 @@ function renderAll(){
       const talentArray = Array.from(s.talents);
         talentsHtml = talentArray.map(talentName => {
             const talentInfo = window.TalentManager ? window.TalentManager.getTalentInfo(talentName) : { name: talentName, description: '暂无描述', color: '#2b6cb0' };
-
-            // 新增：针对“珂朵莉”天赋的渐变色处理
-            let style = '';
-            if (talentName === '世界上最幸福的女孩') {
-                style = `background: linear-gradient(90deg, #ff000020, #0000ff20); /* 红蓝渐变背景（透明） */
-             color: #c0392b; /* 深红色文本 */
-             border-color: #ff000040 #0000ff40 #0000ff40 #ff000040; /* 边框红蓝渐变 */`;
-            }
-            else if (talentName === '珂朵莉') {
-                // 红蓝渐变背景（透明效果，与现有标签的透明度保持一致）
-                // 边框使用渐变两侧的颜色，带透明度（后缀 40 对应原样式的 alpha 值）
-                style = `background: linear-gradient(90deg, #ff000020, #0000ff20); 
-             color: #c0392b; 
-             border-color: #ff000040 #0000ff40 #0000ff40 #ff000040;`;
-            } else if (talentName === '嬲选手') {
-                // 彩虹渐变背景（带透明度，与现有标签风格一致）
-                // 边框使用渐变两端颜色，增强层次感
-                style = `background: linear-gradient(90deg, 
-                     #ff000020, #ffa50020, #ffff0020, 
-                     #00ff0020, #0000ff20, #4b008220, #ee82ee20); 
-             color: #d946ef; /* 紫色文字与渐变呼应 */
-             border-color: #ff000040 #ee82ee40 #ee82ee40 #ff000040;`;
-            } else {
-                // 其他天赋保持原有样式逻辑
-                style = `background-color: ${talentInfo.color}20; 
-             color: ${talentInfo.color}; 
-             border-color: ${talentInfo.color}40;`;
-            }
+            // 统一走 TalentManager 的渐变配色（珂朵莉的红蓝、嬲选手的彩虹等特殊渐变都在那边定义）
+            const style = (window.TalentManager && typeof window.TalentManager.getTalentTagStyle === 'function')
+                ? window.TalentManager.getTalentTagStyle(talentName)
+                : `background-color: ${talentInfo.color}20; color: ${talentInfo.color}; border-color: ${talentInfo.color}40;`;
 
             return `<span class="talent-tag" data-talent="${talentName}" style="${style}">
     ${talentName}
@@ -517,6 +507,7 @@ function renderAll(){
       <div class="student-header">
         <div class="student-name">
           ${s.name}
+          ${s.femaleTeamPath ? '<span class="team-tag" title="女队发展道路：比赛代码难度大幅降低">女队</span>' : ''}
           ${s.sick_weeks > 0 ? '<span class="warn" title="训练效率下降，压力累计加速" aria-label="训练效率下降，压力累计加速">[生病]</span>' : ''}
           ${hasTendency ? '<span class="warn">[退队倾向]</span>' : ''}
           ${qualificationInfo.html}
@@ -1360,7 +1351,7 @@ function renderEndSummary(){
             const talentArray = Array.from(s.talents);
             talentsHtml = talentArray.map(tn => {
               const info = (window.TalentManager && typeof window.TalentManager.getTalentInfo === 'function') ? window.TalentManager.getTalentInfo(tn) : { name: tn, description: '', color: '#2b6cb0' };
-              return `<span class="talent-tag" data-talent="${tn}" style="background-color:${info.color}20;color:${info.color};border-color:${info.color}40;">${tn}<span class="talent-tooltip">${info.description||''}</span></span>`;
+              return `<span class="talent-tag" data-talent="${tn}" style="${(window.TalentManager && typeof window.TalentManager.getTalentTagStyle === 'function') ? window.TalentManager.getTalentTagStyle(tn) : ('background-color:' + info.color + '20;color:' + info.color + ';border-color:' + info.color + '40;')}">${tn}<span class="talent-tooltip">${info.description||''}</span></span>`;
             }).join('');
           }
         }catch(e){ talentsHtml = '';} 
@@ -1627,6 +1618,16 @@ function renderEndSummary(){
       }
     }, 500);
     
+    // 隐藏成就（未解锁的只显示问号，避免被剧透）
+    try{
+      if(el && window.AchievementManager && typeof window.AchievementManager.renderPanelHtml === 'function'){
+        const achWrap = document.createElement('div');
+        achWrap.style.marginTop = '18px';
+        achWrap.innerHTML = window.AchievementManager.renderPanelHtml(o);
+        el.appendChild(achWrap);
+      }
+    }catch(e){ console.error('render achievements panel failed', e); }
+
   }catch(e){ 
     el.innerText = '读取结算数据失败：' + e.message; 
     console.error('renderEndSummary error:', e);
@@ -1856,7 +1857,7 @@ function outingTrainingUI() {
         const top = document.createElement('div');
         const dot = document.createElement('span');
         dot.className = 'color-dot';
-        dot.style.background = info.color || '#2b6cb0';
+        dot.style.background = (window.TalentManager && typeof window.TalentManager.getTalentDotBackground === 'function') ? window.TalentManager.getTalentDotBackground(talentName) : (info.color || '#2b6cb0');
         const title = document.createElement('span');
         title.className = 'title';
         title.textContent = talentName;
@@ -1915,13 +1916,13 @@ function outingTrainingUI() {
         const talentArray = Array.from(s.talents);
         talentsHtml = talentArray.map(talentName => {
           const talentInfo = window.TalentManager ? window.TalentManager.getTalentInfo(talentName) : { name: talentName, description: '暂无描述', color: '#2b6cb0' };
-          return `<span class="talent-tag" data-talent="${talentName}" style="background-color: ${talentInfo.color}20; color: ${talentInfo.color}; border-color: ${talentInfo.color}40;">
+          return `<span class="talent-tag" data-talent="${talentName}" style="${(window.TalentManager && typeof window.TalentManager.getTalentTagStyle === 'function') ? window.TalentManager.getTalentTagStyle(talentName) : `background-color: ${talentInfo.color}20; color: ${talentInfo.color}; border-color: ${talentInfo.color}40;`}">
           ${talentName}
           <span class="talent-tooltip">${talentInfo.description}</span>
         </span>`;
         }).join('');
       }
-      card.innerHTML = `<strong style="display:block">${s.name} ${qualificationInfo.html}</strong>
+      card.innerHTML = `<strong style="display:block">${s.name} ${s.femaleTeamPath ? '<span class="team-tag" title="女队发展道路：比赛代码难度大幅降低">女队</span>' : ''} ${qualificationInfo.html}</strong>
         <div style="color:#666;margin-top:4px">
           <span style="font-size:12px;color:#718096;font-weight:600;">知识</span>
           <div class="knowledge-badges">
@@ -2004,8 +2005,11 @@ function overseasTrainingUI() {
     showModal(`<h3>出境集训</h3>
       <label class="block">难度</label>
       <select id="overseas-diff"><option value="1">基础班</option><option value="2">提高班</option><option value="3">冲刺班</option></select>
-      <label class="block">国家/地区 <a href="country.html" target="_blank" rel="noopener" style="font-size:12px;font-weight:400;margin-left:6px">查看国家一览 ↗</a></label>
+      <label class="block">国家 / 地区 <a href="country.html" target="_blank" rel="noopener" style="font-size:12px;font-weight:400;margin-left:6px">查看国家 / 地区一览 ↗</a></label>
+      <input type="text" id="overseas-country-search" placeholder="🔍 搜索国家 / 地区（支持中英文、拼音首字母）" autocomplete="off"
+             style="width:100%;padding:6px 10px;margin-bottom:8px;border:1px solid #ddd;border-radius:6px;font-size:13px" />
       <div id="overseas-country-grid" class="prov-grid"></div>
+      <div id="overseas-country-search-empty" class="small muted" style="display:none;margin-bottom:8px">没有匹配的国家 / 地区。</div>
       <label class="block">选择学生（点击卡片选择参加）</label>
       <div id="overseas-student-grid" class="student-grid" style="max-height:180px;overflow:auto;border:1px solid #eee;padding:6px;margin-bottom:8px"></div>
       
@@ -2036,13 +2040,35 @@ function overseasTrainingUI() {
       btn.className = 'prov-btn';
       btn.textContent = c.name;
       btn.dataset.val = k;
+      btn.dataset.name = c.name;
+      btn.dataset.type = c.type || '';
+      btn.dataset.hint = c.hint || '';
       btn.onclick = () => {
         document.querySelectorAll('#overseas-country-grid .prov-btn').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
+        updateOverseasCostPreview();
       };
       countryGrid.appendChild(btn);
     });
     if(countryGrid.firstChild) countryGrid.firstChild.classList.add('selected');
+
+    // 搜索国家 / 地区：直接过滤网格里的按钮（选中的那个不会被取消，只是暂时隐藏）
+    const countrySearchInput = document.getElementById('overseas-country-search');
+    if(countrySearchInput){
+      countrySearchInput.oninput = () => {
+        const q = String(countrySearchInput.value || '').trim().toLowerCase();
+        let visible = 0;
+        countryGrid.querySelectorAll('.prov-btn').forEach(b => {
+          const py = (typeof countryPinyin === 'function') ? countryPinyin(b.dataset.name || '') : '';
+          const hay = ((b.dataset.name || '') + ' ' + (b.dataset.type || '') + ' ' + (b.dataset.hint || '') + ' ' + py).toLowerCase();
+          const hit = !q || hay.indexOf(q) >= 0;
+          b.style.display = hit ? '' : 'none';
+          if(hit) visible++;
+        });
+        const emptyTip = document.getElementById('overseas-country-search-empty');
+        if(emptyTip) emptyTip.style.display = visible === 0 ? 'block' : 'none';
+      };
+    }
     
     const overseasTalentGrid = document.getElementById('overseas-talent-grid');
     if(overseasTalentGrid && window.TalentManager){
@@ -2072,7 +2098,7 @@ function overseasTrainingUI() {
         const top = document.createElement('div');
         const dot = document.createElement('span');
         dot.className = 'color-dot';
-        dot.style.background = info.color || '#2b6cb0';
+        dot.style.background = (window.TalentManager && typeof window.TalentManager.getTalentDotBackground === 'function') ? window.TalentManager.getTalentDotBackground(talentName) : (info.color || '#2b6cb0');
         const title = document.createElement('span');
         title.className = 'title';
         title.textContent = talentName + (isHidden ? ' (隐藏)' : '');
@@ -2131,13 +2157,13 @@ function overseasTrainingUI() {
         const talentArray = Array.from(s.talents);
         talentsHtml = talentArray.map(talentName => {
           const talentInfo = window.TalentManager ? window.TalentManager.getTalentInfo(talentName) : { name: talentName, description: '暂无描述', color: '#2b6cb0' };
-          return `<span class="talent-tag" data-talent="${talentName}" style="background-color: ${talentInfo.color}20; color: ${talentInfo.color}; border-color: ${talentInfo.color}40;">
+          return `<span class="talent-tag" data-talent="${talentName}" style="${(window.TalentManager && typeof window.TalentManager.getTalentTagStyle === 'function') ? window.TalentManager.getTalentTagStyle(talentName) : `background-color: ${talentInfo.color}20; color: ${talentInfo.color}; border-color: ${talentInfo.color}40;`}">
           ${talentName}
           <span class="talent-tooltip">${talentInfo.description}</span>
         </span>`;
         }).join('');
       }
-      card.innerHTML = `<strong style="display:block">${s.name} ${qualificationInfo.html}</strong>
+      card.innerHTML = `<strong style="display:block">${s.name} ${s.femaleTeamPath ? '<span class="team-tag" title="女队发展道路：比赛代码难度大幅降低">女队</span>' : ''} ${qualificationInfo.html}</strong>
         <div style="color:#666;margin-top:4px">
           <span style="font-size:12px;color:#718096;font-weight:600;">知识</span>
           <div class="knowledge-badges">
@@ -2177,23 +2203,28 @@ function overseasTrainingUI() {
         const country = COUNTRIES[countryId];
         if (!country) return;
 
-        // 1. 基础费用（参考constants.js中的外出集训基础费用）
-        const baseCosts = [
-            19998,    // 强度1（基础）
-            28888, // 强度2（中级）
-            32767  // 强度3（高级）
-        ];
-        const baseCost = baseCosts[intensity - 1];
+        // 1. 路费：直接复用真实的费用函数，保证预览和实际扣款一致
+        let tripCost = 0;
+        try {
+            if (selectedCount > 0 && typeof computeOutingCostQuadratic === 'function') {
+                tripCost = computeOutingCostQuadratic(intensity, parseInt(countryId, 10), selectedCount, Number(country.costMultiplier) || 1.0) * 1.5;
+            }
+        } catch (e) {
+            tripCost = selectedCount * 30000 * (Number(country.costMultiplier) || 1.0);
+        }
 
-        // 2. 国家费用乘数（结合country.costMultiplier）
-        const totalCost = selectedCount * baseCost * country.costMultiplier;
+        // 2. 港澳特例：在港澳本地上学，去港澳集训不收路费
+        const homeIsGangAo = (game.province_name === '香港' || game.province_name === '澳门');
+        const targetIsGangAo = (country.name === '香港' || country.name === '澳门');
+        if (homeIsGangAo && targetIsGangAo) tripCost = 0;
 
-        // 3. 天赋激发费用（保持原逻辑）
+        // 3. 天赋激发费用
         const selectedTalents = Array.from(document.querySelectorAll('#overseas-talent-grid .talent-card[data-selected="1"]')).length;
         const talentCost = selectedTalents * 20000;
 
-        // 4. 最终费用
-        const finalCost = Math.floor(totalCost + talentCost);
+        // 4. 最终费用（含全局经费消耗倍率，与 recordExpense 保持一致）
+        const costMult = (typeof COST_MULTIPLIER !== 'undefined' ? COST_MULTIPLIER : 1.0);
+        const finalCost = Math.floor((tripCost + talentCost) * costMult);
 
         // 更新UI
         document.getElementById('overseas-cost-preview').textContent = `¥${finalCost}`;
@@ -2538,7 +2569,7 @@ function showPartTimeJobUI() {
             const talentArray = Array.from(s.talents);
             talentsHtml = talentArray.map(talentName => {
                 const talentInfo = window.TalentManager ? window.TalentManager.getTalentInfo(talentName) : { name: talentName, description: '暂无描述', color: '#2b6cb0' };
-                return `<span class="talent-tag" data-talent="${talentName}" style="background-color: ${talentInfo.color}20; color: ${talentInfo.color}; border-color: ${talentInfo.color}40;">
+                return `<span class="talent-tag" data-talent="${talentName}" style="${(window.TalentManager && typeof window.TalentManager.getTalentTagStyle === 'function') ? window.TalentManager.getTalentTagStyle(talentName) : `background-color: ${talentInfo.color}20; color: ${talentInfo.color}; border-color: ${talentInfo.color}40;`}">
                 ${talentName}
                 <span class="talent-tooltip">${talentInfo.description}</span>
               </span>`;

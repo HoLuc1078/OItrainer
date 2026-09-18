@@ -1299,6 +1299,8 @@
               '16546c9e77fe6b52db3854b9173c33747609e67b274e3e30ad99416291af41b4',
               '8262026e02da90d8edf69b0f243916ec491f25dea72d0a2c19cddfbe8adfb867'
           ];
+          // 新增彩蛋：训话输入 "chtholly" 可以把珂朵莉召唤进队伍
+          const CHTHOLLY_CODE = '7c5784a843fd00798c3c9e9a003355bef5bdc9ebbd5107a2d01fcb4c139b40ca';
           const miaomiaomiao = 'd7b998b8c7ef7b05e070f30c3ed369f400d99e550df28b1f9c08a61b73478f30';
         function fallbackPush(msg){
           try{
@@ -1349,7 +1351,7 @@
           img.src = imgPath;
         };
 
-          if (cheatCodes.includes(hash)) {
+          if (cheatCodes.includes(hash) || hash === CHTHOLLY_CODE) {
               // 新增：检查是否已使用过作弊码（每局游戏仅一次）
               // 初始化游戏状态中的作弊标记（若不存在）
               if (typeof window.game.cheatUsed === 'undefined') {
@@ -1358,11 +1360,17 @@
 
               if (window.game.cheatUsed) {
                   // 已使用过，提示并阻止执行
-                  alert('你还想要几个李欣隆？');
+                  alert(hash === CHTHOLLY_CODE ? '珂朵莉只有一个。' : '你还想要几个李欣隆？');
                   return;
               }
 
-              // 3. 调用debug.js中的addSuperStudent()函数
+              // 3. 调用debug.js中的超级学生生成函数
+              if (hash === CHTHOLLY_CODE && typeof chthollySummon === 'function') {
+                  chthollySummon();
+                  window.game.cheatUsed = true;
+                  input.value = '';
+                  return;
+              }
               if (typeof Fuck_CCF === 'function') {
                   Fuck_CCF();
                   // 标记为已使用

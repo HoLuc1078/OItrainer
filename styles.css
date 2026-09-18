@@ -1668,6 +1668,42 @@ body.comp-week .action-cards .action-card:not(#comp-only-action) {
   color: var(--accent);
 }
 
+/* =========== 女队标签 =========== */
+.team-tag {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.5;
+  border-radius: 999px;
+  border: 1px solid rgba(236,72,153,0.5);
+  background: linear-gradient(120deg, rgba(236,72,153,0.20), rgba(139,92,246,0.20));
+  color: #be185d;
+  vertical-align: middle;
+}
+
+/* =========== 隐藏成就 =========== */
+.ach-panel { margin-top: 6px; }
+.ach-panel .ach-head { font-size: 15px; font-weight: 700; color: #333; margin-bottom: 2px; }
+.ach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+.ach-card {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px dashed #cbd5e1;
+  background: #f8fafc;
+  color: #64748b;
+  transition: .15s;
+}
+.ach-card .ach-title { font-weight: 700; font-size: 13.5px; margin-bottom: 4px; }
+.ach-card .ach-desc { font-size: 12px; line-height: 1.6; }
+.ach-card.ach-on {
+  border: 1px solid rgba(245,158,11,0.55);
+  background: linear-gradient(120deg, rgba(245,158,11,0.16), rgba(236,72,153,0.14));
+  color: #92400e;
+  box-shadow: 0 2px 10px rgba(245,158,11,0.15);
+}
+
 
 
 
