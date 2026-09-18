@@ -509,7 +509,7 @@ function renderAll(){
           ${s.name}
           ${s.femaleTeamPath ? '<span class="team-tag" title="女队发展道路：比赛代码难度大幅降低">女队</span>' : ''}
           ${s.sick_weeks > 0 ? '<span class="warn" title="训练效率下降，压力累计加速" aria-label="训练效率下降，压力累计加速">[生病]</span>' : ''}
-          ${hasTendency ? '<span class="warn">[退队倾向]</span>' : ''}
+          ${hasTendency ? '<span class="warn" title="压力已经达到退队线：退队保护生效中，一周内把压力降回 90 以下就能化解，否则会真的退队">[退队倾向]</span>' : ''}
           ${qualificationInfo.html}
         </div>
         <div class="student-status">
@@ -2373,7 +2373,7 @@ function bindExtraTrainClick(button) {
                 <div class="modal-content">
                     <h3>确认加训</h3>
                     <p>加训将无行动值消耗，提升训练效果，但会使学生压力增加50%。</p>
-                    <p class="warning" style="color:#e53e3e;">警告：压力超过100的学生将直接退队！</p>
+                    <p class="warning" style="color:#e53e3e;">警告：加训会让压力大幅上涨。压力顶到退队线时会有<strong>一周退队保护</strong>（先产生「退队倾向」），缓冲期内把压力降回 90 以下就能化解，否则下周才会真的退队。</p>
                     
                     ${studentsPressureHtml}
                     
@@ -2447,7 +2447,8 @@ function executeExtraTraining(task) {
     const weatherFactor = window.game.getWeatherFactor();
     const comfort = window.game.getComfort();
     const comfortFactor = 1.0 + Math.max(0.0, (50 - comfort) / 100.0);
-    const quitList = []; // 记录本次退队学生
+    const quitList = []; // 记录本次真的退队的学生
+    const tendencyList = []; // 记录本次被"退队保护"救下的学生（只挂退队倾向）
 
     for (let s of window.game.students) {
         if (!s || !s.active) continue;
@@ -2487,8 +2488,10 @@ function executeExtraTraining(task) {
         s.pressure = (s.pressure || 0) + pressureIncrease;
         console.log(`[加训压力] ${s.name} 压力变为: ${s.pressure.toFixed(1)}`);
 
-        // 3. 核心判定：压力>100直接退队（无需经过退队倾向周数，参考events.js的burnout事件退队逻辑）
-        if (s.pressure > 100) {
+        // 3. 核心判定：退队保护 —— 压力顶到阈值不会当场退队，而是先挂"退队倾向"，
+        //    缓冲过一周之后（压力仍然没降下来）才真的退队。判定逻辑统一在 game.js 的 evaluateQuitRisk。
+        const risk = (typeof evaluateQuitRisk === 'function') ? evaluateQuitRisk(s) : null;
+        if (risk && risk.action === 'quit') {
             quitList.push(s.name);
             // 从学生列表移除
             const index = window.game.students.indexOf(s);
@@ -2506,12 +2509,27 @@ function executeExtraTraining(task) {
             } catch (e) {
                 console.error('退队天赋触发失败:', e);
             }
+        } else if (risk && risk.action === 'protected' && !risk.graceConsumed) {
+            // 第一次顶到退队线：只挂退队倾向，给玩家一周时间救他
+            tendencyList.push(s.name);
         }
+    }
+
+    // 3.5 退队保护提示
+    if (tendencyList.length > 0) {
+        const msg = `${tendencyList.join('、')} 加训后压力顶到了退队线，产生了退队倾向。` +
+            `退队保护已生效：一周内把压力降回 90 以下就能化解，否则会真的退队。`;
+        window.log(`[加训·退队保护] ${msg}`);
+        window.pushEvent && window.pushEvent({
+            name: '退队倾向',
+            description: msg,
+            week: window.game.week
+        });
     }
 
     // 4. 输出退队日志并处理全退场景
     if (quitList.length > 0) {
-        const msg = `${quitList.join('、')} 因加训后压力超过100，已直接退队！声誉-10`;
+        const msg = `${quitList.join('、')} 因加训后压力过高，退队保护期已过，已退队！声誉-10`;
         window.log(`[加训退队] ${msg}`);
         window.pushEvent && window.pushEvent({
             name: '加训退队',
@@ -2543,7 +2561,7 @@ function executeExtraTraining(task) {
             } catch (e) {}
         }
     } else {
-        window.log('加训完成，所有学生压力均未超过100');
+        window.log('加训完成，没有学生被压力顶到退队线');
     }
 }
 // 在 render.js 中添加以下函数
@@ -2794,6 +2812,7 @@ function executePartTimeJobWithSelection(selectedStudentNames) {
     const comfortFactor = 1.0 + Math.max(0.0, (50 - comfort) / 100.0);
     let totalEarnings = 0;
     const quitList = [];
+    const tendencyList = [];
 
     selectedStudentNames.forEach(studentName => {
         const s = game.students.find(student => student.name === studentName && student.active);
@@ -2839,8 +2858,9 @@ function executePartTimeJobWithSelection(selectedStudentNames) {
         const studentEarnings = calculateStudentEarnings(thinking, coding, mental);
         totalEarnings += studentEarnings;
 
-        // 检查压力是否超过100
-        if (s.pressure > 100) {
+        // 退队保护：压力顶到退队线不会当场退队，先挂"退队倾向"，过一周才真的退队
+        const risk = (typeof evaluateQuitRisk === 'function') ? evaluateQuitRisk(s) : null;
+        if (risk && risk.action === 'quit') {
             quitList.push(s.name);
             const index = game.students.indexOf(s);
             if (index > -1) {
@@ -2848,6 +2868,9 @@ function executePartTimeJobWithSelection(selectedStudentNames) {
             }
             game.quit_students = (game.quit_students || 0) + 1;
             game.reputation = Math.max(0, game.reputation - 5);
+            try { if (typeof s.triggerTalents === 'function') s.triggerTalents('quit', { reason: 'part_time_pressure' }); } catch (e) { }
+        } else if (risk && risk.action === 'protected' && !risk.graceConsumed) {
+            tendencyList.push(s.name);
         }
     });
 
@@ -2855,9 +2878,21 @@ function executePartTimeJobWithSelection(selectedStudentNames) {
     game.budget = (game.budget || 0) + totalEarnings;
     window.log(`打工结束：获得资金 ¥${totalEarnings}，当前预算：¥${game.budget}`);
 
+    // 退队保护提示
+    if (tendencyList.length > 0) {
+        const msg = `${tendencyList.join('、')} 打工后压力顶到了退队线，产生了退队倾向。` +
+            `退队保护已生效：一周内把压力降回 90 以下就能化解，否则会真的退队。`;
+        window.log(`[打工·退队保护] ${msg}`);
+        window.pushEvent && window.pushEvent({
+            name: '退队倾向',
+            description: msg,
+            week: game.week
+        });
+    }
+
     // 处理退队日志
     if (quitList.length > 0) {
-        const msg = `${quitList.join('、')} 因打工后压力超过100退队！声誉-5`;
+        const msg = `${quitList.join('、')} 因打工后压力过高，退队保护期已过，已退队！声誉-5`;
         window.log(`[打工退队] ${msg}`);
         window.pushEvent && window.pushEvent({
             name: '打工退队',

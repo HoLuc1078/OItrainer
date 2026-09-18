@@ -282,9 +282,9 @@ function calculateTrainingPressure(task, intensity) {
       
       const predictedPressure = s.pressure + finalPressureIncrease;
       
-      // 检查退队风险：
-      // 1. 如果预测压力>=90，且学生已有退队倾向（quit_tendency_weeks >= 1），下周将退队
-      // 2. 如果预测压力>=90，即使没有退队倾向，也是高风险（会获得退队倾向）
+      // 检查退队风险（与 evaluateQuitRisk 的规则保持一致）：
+      // 1. 预测压力 >= 90：会获得退队倾向（第一次有退队保护，不会当场退队）
+      // 2. 学生已经带着退队倾向（quit_tendency_weeks >= 1）：再顶着压力就危险了
       const currentQuitWeeks = s.quit_tendency_weeks || 0;
       
       if(predictedPressure >= 90) {
@@ -1144,6 +1144,73 @@ function checkRandomEvents(){
     console.warn('EventManager 未注册，跳过随机事件处理');
   }
   window.renderAll();
+}
+
+/* =========== 退队保护 =========== */
+/**
+ * 压力退队判定（带"退队保护"）。
+ *
+ * 规则（保护的核心是：压力到阈值后不会当场退队，而是先挂"退队倾向"）：
+ *   1. 压力 < QUIT_PRESSURE_TENDENCY(90)：退队倾向清除 —— 这就是"救回来"的样子；
+ *   2. 第一次达到阈值：只挂上退队倾向（quit_tendency_weeks = 1）并给出警告，本次绝不退队；
+ *   3. 带着退队倾向再判定一次（quit_grace_pending）：仍然不退队，等于给了一周缓冲；
+ *   4. 缓冲用过之后才真正判定退队：
+ *        - 压力仍 >= QUIT_PRESSURE_HARD(100)：必定退队（乐天派有一半机会再躲一次）；
+ *        - 压力 90~99：按 QUIT_PROB_BASE + 0.02 × 超出量 的概率退队（乐天派减半）。
+ *
+ * @param {Object} s 学生
+ * @returns {{action:'clear'|'protected'|'tendency'|'quit', probability?:number}}
+ *          clear=压力回落、protected=本次被保护、tendency=判定后幸存、quit=退队
+ */
+function evaluateQuitRisk(s){
+  try{
+    if(!s) return { action: 'clear' };
+    const tendencyThreshold = (typeof QUIT_PRESSURE_TENDENCY !== 'undefined') ? QUIT_PRESSURE_TENDENCY : 90;
+    const hardThreshold = (typeof QUIT_PRESSURE_HARD !== 'undefined') ? QUIT_PRESSURE_HARD : 100;
+    const baseProb = (typeof QUIT_PROB_BASE !== 'undefined') ? QUIT_PROB_BASE : 0.22;
+    const perPressure = (typeof QUIT_PROB_PER_EXTRA_PRESSURE !== 'undefined') ? QUIT_PROB_PER_EXTRA_PRESSURE : 0.02;
+    const pressure = Number(s.pressure || 0);
+
+    // 1. 压力回落：退队倾向自动清除
+    if(pressure < tendencyThreshold){
+      s.quit_tendency_weeks = 0;
+      s.quit_grace_pending = false;
+      return { action: 'clear' };
+    }
+
+    const weeks = Number(s.quit_tendency_weeks || 0);
+
+    // 2. 第一次达到阈值：只挂"退队倾向"，绝不当场退队
+    if(weeks < 1){
+      s.quit_tendency_weeks = 1;
+      s.quit_grace_pending = true;
+      return { action: 'protected', protected: true, graceConsumed: false };
+    }
+
+    // 3. 退队保护：带着倾向再等一次判定（至少跨过一周），本次仍然不退队
+    if(s.quit_grace_pending){
+      s.quit_grace_pending = false;
+      s.quit_tendency_weeks = Math.max(2, weeks);
+      return { action: 'protected', protected: true, graceConsumed: true };
+    }
+
+    // 4. 正式判定
+    s.quit_tendency_weeks = Math.max(2, weeks);
+    let prob;
+    if(pressure >= hardThreshold){
+      // 缓冲过一周还顶在阈值上：基本没救（乐天派还能再赌一次）
+      prob = (s.talents && typeof s.talents.has === 'function' && s.talents.has('乐天派')) ? 0.5 : 1;
+    } else {
+      prob = baseProb + perPressure * (pressure - tendencyThreshold);
+      if(s.talents && typeof s.talents.has === 'function' && s.talents.has('乐天派')) prob *= 0.5;
+    }
+    prob = Math.max(0, Math.min(1, prob));
+    if(getRandom() < prob) return { action: 'quit', probability: prob };
+    return { action: 'tendency', probability: prob };
+  }catch(e){
+    console.error('evaluateQuitRisk failed', e);
+    return { action: 'clear' };
+  }
 }
 
 function weeklyUpdate(weeks=1){

@@ -143,52 +143,46 @@
         description: '压力累计导致学生退队',
         check: c => c.game.students.some(s => s.active && (s.pressure >= 90 || (s.quit_tendency_weeks && s.quit_tendency_weeks > 0))),
         run: c => {
-          const {QUIT_PROB_BASE, QUIT_PROB_PER_EXTRA_PRESSURE} = c.constants;
           const quitList = [];
-          const tendencyList = [];
-          
-            // 在events.js的burnout事件run函数中，修改压力处理逻辑
+          const tendencyList = [];   // 本轮首次产生退队倾向（会推卡片）
+          const survivedList = [];   // 已经带着倾向、本轮判定后侥幸留下（只写日志，避免刷屏）
+
+            // 退队保护：所有压力退队都走 evaluateQuitRisk（见 game.js），
+            // 压力到阈值先挂"退队倾向"，缓冲过一周之后才会真的退队。
             for (let i = c.game.students.length - 1; i >= 0; i--) {
                 const s = c.game.students[i];
                 if (!s || s.active === false) continue;
 
-                if (s.pressure >= 100) {
-                    // 压力超过100时，直接将退队倾向周数设为2（跳过1周的提示阶段）
-                    s.quit_tendency_weeks = 2;
-                    console.log(`[高压警告] ${s.name}压力超过100，直接进入退队判定`);
-                } else if (s.pressure >= 90) {
-                    // 原逻辑：压力90-99时，正常积累退队倾向周数
-                    s.quit_tendency_weeks = (s.quit_tendency_weeks || 0) + 1;
-                } else {
-                    // 压力低于90，清除退队倾向
-                    s.quit_tendency_weeks = 0;
-                }
+                const risk = (typeof evaluateQuitRisk === 'function')
+                    ? evaluateQuitRisk(s)
+                    : null;
+                if (!risk) continue;
 
-                // 后续退队概率计算逻辑不变（当quit_tendency_weeks > 1时执行）
-                if (s.quit_tendency_weeks > 1) {
-                    let prob = QUIT_PROB_BASE + QUIT_PROB_PER_EXTRA_PRESSURE * (s.pressure - 90);
-                    // 乐天派天赋修正（原逻辑保留）
-                    if (s.talents && s.talents.has('乐天派')) {
-                        prob = prob * 0.5;
-                    }
-                    // 触发退队
-                    if (getRandom() < prob) {
-                        // 退队处理（原逻辑保留）
-                        quitList.push(s.name);
-                        c.game.students.splice(i, 1);
-                        // ...其他退队相关操作
-                    }
-                } else if (s.quit_tendency_weeks === 1) {
-                    // 仅压力90-99且首次达到时，提示退队倾向（原逻辑保留）
-                    tendencyList.push(s.name);
+                if (risk.action === 'quit') {
+                    // 退队处理（原逻辑保留：只从名单里移出）
+                    quitList.push(s.name);
+                    c.game.students.splice(i, 1);
+                    try { c.game.quit_students = (c.game.quit_students || 0) + 1; } catch (e) { }
+                    try { if (typeof s.triggerTalents === 'function') s.triggerTalents('quit', { reason: 'burnout' }); } catch (e) { }
+                } else if (risk.action === 'protected') {
+                    // 本次被退队保护拦下：第一次产生倾向时提示，之后只写日志
+                    if (!risk.graceConsumed) tendencyList.push(s.name);
+                    else survivedList.push(s.name + '（仍在退队保护期）');
+                } else if (risk.action === 'tendency') {
+                    // 判定后幸存，但仍然保持退队倾向
+                    survivedList.push(s.name + '（压力未缓解，仍在退队边缘）');
                 }
             }
-          
-          // 显示退队倾向提示
+
+          // 退队保护 / 退队倾向提示
           if(tendencyList.length){
-            const msg = `${tendencyList.join('、')} 因压力过大产生退队倾向，如不缓解将在下周退队`;
+            const msg = `${tendencyList.join('、')} 压力到达退队线，产生了退队倾向。` +
+                        `退队保护已生效：这一周内把压力拉回 90 以下就能化解（放假、娱乐、降低训练强度都行），否则过一周就会真的退队。`;
             log && log(`[警告] ${msg}`);
             window.pushEvent && window.pushEvent({ name:'退队倾向', description: msg, week: c.game.week });
+          }
+          if(survivedList.length){
+            log && log(`[警告] ${survivedList.join('、')}`);
           }
           
           // 显示实际退队
