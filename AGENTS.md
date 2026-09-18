@@ -139,7 +139,7 @@
 | `utils.js` | **随机数基础设施**（`SeededRandom` / `getRandom` / `setRandomSeed` / `getRandomState` / `withRandomSeed` …）+ 数值工具（`clamp` / `sigmoid` / `uniformInt` / `normal`）+ 字母等级 `getLetterGrade` + 姓名生成（含少数民族姓名池）+ **今日挑战参数** `getDailyChallengeParams()`。 |
 | `models.js` | 数据模型：`Student`（能力 / 知识点 / 压力 / 舒适度 / 天赋 / 比赛中的临时修正）、`GameState`（全局状态 + `stats` 统计 + 随机种子字段 + `bumpStat` / `maxStat` / `minStat`）、比赛日程构建、旧存档迁移 `migrateStudentIdentities()`。 |
 | `talent.js` | **天赋系统**：`TalentManager` 注册全部天赋（普通 + 隐藏 + 负面）、触发逻辑、获取 / 失去概率、初始天赋分配、天赋标签渐变配色。加天赋基本只动这个文件。 |
-| `achievements.js` | **成就系统（93 个，两类）**：`PUBLIC_ACHIEVEMENTS`（38 个**外显成就**，锁着也显示名字 / 条件 / 进度条）+ `HIDDEN_ACHIEVEMENTS`（55 个**隐藏成就**，解锁前只显示 ？？？）；`AchievementManager.checkAll` / `unlock` / `renderPanelHtml`（两栏 Tab，切换函数 `oiAchTab`）、分类与进度条、顶栏徽章。**加成就前先读文件头的说明**。 |
+| `achievements.js` | **成就系统（93 个，两类）**：`PUBLIC_ACHIEVEMENTS`（38 个**外显成就**，锁着也显示名字 / 条件 / 进度条）+ `HIDDEN_ACHIEVEMENTS`（55 个**隐藏成就**，解锁前只显示 ？？？）；`AchievementManager.checkAll` / `unlock` / `renderPanelHtml`（两栏 Tab，切换函数 `oiAchTab`，刷新 `oiAchRefresh`，清档 `oiAchReset`）、分类与进度条、顶栏徽章。**解锁记录跨局持久化在 `localStorage['oi_achievements_profile_v1']`，不随存档走**。加成就前先读文件头的说明。 |
 | `task.js` | 训练题库（`TASK_POOL`）、选题（`selectRandomTasks`：按吸收率推荐 + 随机）、做题增幅曲线、洗牌。 |
 | `competitions.js` | **比赛模拟引擎**：`CompetitionEngine` —— 生成题目（难度 / 标签 / 子任务 / 部分分）、选手逐题模拟（思维检定 / 编码检定 / 失误 / 换题）、排名与滚榜。 |
 | `contest-ui.js` | 比赛界面：实时滚榜、逐题进度、比赛过程展示。 |
@@ -192,6 +192,9 @@
   新增 Set 字段时记得在这里补一条，否则会报 `xxx.has is not a function`。
   ⚠️ 顺序有讲究：学生相关的还原必须放在 `game.students` 被实例化成 `Student` **之后**，
   否则随后的 `map` 会把已经还原好的 `Set` 当成普通对象读成空集。
+- **成就不在存档里**：解锁记录跨局持久化在 `localStorage['oi_achievements_profile_v1']`（见 `lib/achievements.js` 的
+  `__profile()` / `__profileUnlock()`）。判定"是否已解锁"用 `AchievementManager.allUnlockedIds(game)`（本局 ∪ 档案），
+  `unlockedIds(game)` 只是本局记录。新增成就时不需要额外做什么，写盘会自动发生。
 - **新字段要有兜底**：`lib/models.js` 的 `migrateStudentIdentities()` 是旧存档的兼容入口，
   新增 `stats` 字段 / 结构字段时在这里补默认值，旧存档才不会炸。
 - **容错风格**：存档、统计、成就、天赋钩子相关的代码请用 `try/catch` 包住并写日志，

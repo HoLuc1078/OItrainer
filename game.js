@@ -1834,6 +1834,8 @@ function loadGame(){ try{
   
   // 存档兼容处理：隐藏天赋改名 + 女队学生身份修复（找回被改名冲掉的比赛履历）
   try{ if(typeof migrateStudentIdentities === 'function') migrateStudentIdentities(game); }catch(e){ console.error('migrateStudentIdentities failed in loadGame', e); }
+  // 老存档里解锁过的成就，补进跨局档案，避免"读一次档就退回去"
+  try{ if(window.AchievementManager) window.AchievementManager.syncProfileFromRun(game); }catch(e){}
   try{ if(window.AchievementManager) window.AchievementManager.checkAll(game); }catch(e){}
   renderAll(); alert("已载入存档"); }catch(e){ alert("载入失败："+e); } }
 
@@ -1852,6 +1854,7 @@ function silentLoad(){ try{
   }
   
   try{ if(typeof migrateStudentIdentities === 'function') migrateStudentIdentities(game); }catch(e){}
+  try{ if(window.AchievementManager) window.AchievementManager.syncProfileFromRun(game); }catch(e){}
   try{ if(window.AchievementManager) window.AchievementManager.checkAll(game); }catch(e){}
   return true; }catch(e){ return false; } }
 
@@ -2009,6 +2012,9 @@ function initGame(difficulty, province_choice, student_count, seed){
   
   // 记下开局结束时的随机流快照，刷新页面 / 读档后可以从这里继续
   try{ if(typeof getRandomState === 'function'){ const st = getRandomState(); if(st) game.rngState = st; } }catch(e){}
+
+  // 跨局成就档案：这一局计入累计局数（成就解锁记录存在 localStorage 里，不随存档走）
+  try{ if(window.AchievementManager && typeof window.AchievementManager.markRunStart === 'function') window.AchievementManager.markRunStart(); }catch(e){}
 
   log("初始化完成，开始游戏！");
 }

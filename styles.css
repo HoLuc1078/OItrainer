@@ -1704,6 +1704,42 @@ body.comp-week .action-cards .action-card:not(#comp-only-action) {
   box-shadow: 0 2px 10px rgba(245,158,11,0.15);
 }
 
+/* 跨局累计说明 + 底部档案区 */
+.ach-panel .ach-sub {
+  margin: -2px 0 10px;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.ach-panel .ach-foot {
+  margin-top: 16px;
+  padding-top: 10px;
+  border-top: 1px dashed #e2e8f0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+.ach-panel .ach-foot code {
+  background: #f1f5f9;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 11.5px;
+  color: #475569;
+}
+.ach-panel .ach-reset {
+  appearance: none;
+  border: 1px solid #e5c0c0;
+  background: #fff5f5;
+  color: #b91c1c;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: .15s;
+}
+.ach-panel .ach-reset:hover { background: #fee2e2; border-color: #f0a8a8; }
+
 /* 成就面板的两栏 Tab（🏅 成就 / ❓ 隐藏成就） */
 .ach-panel .ach-tabs {
   display: flex;
