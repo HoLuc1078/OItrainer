@@ -1704,6 +1704,63 @@ body.comp-week .action-cards .action-card:not(#comp-only-action) {
   box-shadow: 0 2px 10px rgba(245,158,11,0.15);
 }
 
+/* 成就面板的两栏 Tab（🏅 成就 / ❓ 隐藏成就） */
+.ach-panel .ach-tabs {
+  display: flex;
+  gap: 6px;
+  margin: 8px 0 12px;
+  border-bottom: 1px solid #e5e9f0;
+  padding-bottom: 0;
+}
+.ach-panel .ach-tab {
+  appearance: none;
+  border: 1px solid #dbe3ec;
+  border-bottom: none;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+  transition: .15s;
+}
+.ach-panel .ach-tab:hover { color: #334155; background: #e8eef5; }
+.ach-panel .ach-tab.ach-tab-on {
+  background: #fff;
+  color: #92400e;
+  border-color: rgba(245,158,11,0.55);
+  box-shadow: 0 -2px 8px rgba(245,158,11,0.10);
+  position: relative;
+  top: 1px;
+}
+.ach-panel .ach-tab .ach-tab-num {
+  font-weight: 400;
+  font-size: 11.5px;
+  opacity: 0.75;
+  margin-left: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.ach-panel .ach-section { padding-top: 2px; }
+.ach-panel .ach-section .ach-hint { margin-bottom: 10px; }
+
+/* 外显成就：锁着也看得见名字，用实线边框区分于隐藏成就 */
+.ach-card.ach-public {
+  border-style: solid;
+  border-color: #dbe3ec;
+  background: #fff;
+}
+.ach-card.ach-public:not(.ach-on) .ach-title { color: #475569; }
+.ach-card.ach-public:not(.ach-on) .ach-progress-bar {
+  background: linear-gradient(90deg, #93c5fd, #60a5fa);
+}
+.ach-card.ach-public.ach-on {
+  border: 1px solid rgba(59,130,246,0.5);
+  background: linear-gradient(120deg, rgba(59,130,246,0.14), rgba(16,185,129,0.12));
+  color: #1e40af;
+}
+.ach-card.ach-public.ach-on .ach-title { color: #1e40af; }
+
 /* 成就分类总览（一行小胶囊） */
 .ach-panel .ach-cats {
   display: flex;

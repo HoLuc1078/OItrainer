@@ -2107,7 +2107,8 @@ function overseasTrainingUI() {
         dot.style.background = (window.TalentManager && typeof window.TalentManager.getTalentDotBackground === 'function') ? window.TalentManager.getTalentDotBackground(talentName) : (info.color || '#2b6cb0');
         const title = document.createElement('span');
         title.className = 'title';
-        title.textContent = talentName + (isHidden ? ' (隐藏)' : '');
+        // 隐藏天赋也直接显示本名（不额外加「(隐藏)」后缀）
+        title.textContent = talentName;
         top.appendChild(dot);
         top.appendChild(title);
         

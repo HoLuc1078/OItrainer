@@ -109,12 +109,12 @@
 | --- | --- |
 | `index.html` | 主入口 / 菜单 / 更新日志。含全屏「矩阵雨」背景动画（纯装饰，放心用 `Math.random`）。 |
 | `start.html` | 开局设置：三步向导（难度 → 省份 → 招生）、可交互省份地图（ECharts + `assets/china.json`）、**今日挑战**按钮、对点招生 / 学前培养 / 天赋选择。 |
-| `game.html` | 主游戏界面骨架：顶栏（周数 / 经费 / 声誉 / 天气 / 下场比赛 / 隐藏成就徽章）、学生卡片区、周信息、设施状态、训话框、日志、八个行动按钮。**只负责 DOM 结构**，逻辑在 `game.js` / `render.js`。 |
-| `end.html` | 赛季结算页：读取存档与结局原因，渲染时间线、成绩、随机种子、隐藏成就。 |
-| `shared.html` | 分享结果页：解析别人分享的链接，展示对方那一局的成绩、随机种子、隐藏成就。 |
+| `game.html` | 主游戏界面骨架：顶栏（周数 / 经费 / 声誉 / 天气 / 下场比赛 / 成就徽章）、学生卡片区、周信息、设施状态、训话框、日志、八个行动按钮。**只负责 DOM 结构**，逻辑在 `game.js` / `render.js`。 |
+| `end.html` | 赛季结算页：读取存档与结局原因，渲染时间线、成绩、随机种子、成就面板（两栏 Tab）。 |
+| `shared.html` | 分享结果页：解析别人分享的链接，展示对方那一局的成绩、随机种子、成就数量。 |
 | `country.html` | 🌍 国家 / 地区一览：列出全部出境集训目的地的「传闻」（支持中文 / 拼音首字母 / 英文 / 关键词搜索），**不剧透具体事件**。 |
 | `help.html` / `help.md` | 攻略。`help.md` 是文本版，`help.html` 是网页版。 |
-| `styles.css` | 全站样式。隐藏成就相关的 `.ach-*` 类在文件末尾。 |
+| `styles.css` | 全站样式。成就面板相关的 `.ach-*` 类（含两栏 Tab、进度条）在文件末尾。 |
 
 ### 4.2 顶层脚本
 
@@ -139,13 +139,13 @@
 | `utils.js` | **随机数基础设施**（`SeededRandom` / `getRandom` / `setRandomSeed` / `getRandomState` / `withRandomSeed` …）+ 数值工具（`clamp` / `sigmoid` / `uniformInt` / `normal`）+ 字母等级 `getLetterGrade` + 姓名生成（含少数民族姓名池）+ **今日挑战参数** `getDailyChallengeParams()`。 |
 | `models.js` | 数据模型：`Student`（能力 / 知识点 / 压力 / 舒适度 / 天赋 / 比赛中的临时修正）、`GameState`（全局状态 + `stats` 统计 + 随机种子字段 + `bumpStat` / `maxStat` / `minStat`）、比赛日程构建、旧存档迁移 `migrateStudentIdentities()`。 |
 | `talent.js` | **天赋系统**：`TalentManager` 注册全部天赋（普通 + 隐藏 + 负面）、触发逻辑、获取 / 失去概率、初始天赋分配、天赋标签渐变配色。加天赋基本只动这个文件。 |
-| `achievements.js` | **隐藏成就（55 个）**：`HIDDEN_ACHIEVEMENTS` 定义、`AchievementManager.checkAll` / `unlock` / `renderPanelHtml`、分类与进度条、顶栏徽章。**加成就前先读文件头的说明**。 |
+| `achievements.js` | **成就系统（93 个，两类）**：`PUBLIC_ACHIEVEMENTS`（38 个**外显成就**，锁着也显示名字 / 条件 / 进度条）+ `HIDDEN_ACHIEVEMENTS`（55 个**隐藏成就**，解锁前只显示 ？？？）；`AchievementManager.checkAll` / `unlock` / `renderPanelHtml`（两栏 Tab，切换函数 `oiAchTab`）、分类与进度条、顶栏徽章。**加成就前先读文件头的说明**。 |
 | `task.js` | 训练题库（`TASK_POOL`）、选题（`selectRandomTasks`：按吸收率推荐 + 随机）、做题增幅曲线、洗牌。 |
 | `competitions.js` | **比赛模拟引擎**：`CompetitionEngine` —— 生成题目（难度 / 标签 / 子任务 / 部分分）、选手逐题模拟（思维检定 / 编码检定 / 失误 / 换题）、排名与滚榜。 |
 | `contest-ui.js` | 比赛界面：实时滚榜、逐题进度、比赛过程展示。 |
 | `contest-integration.js` | **赛事与主流程的胶水层**：把 `competitions.js` 的引擎接进赛季（判定资格、生成国际选手、算分数线与拨款、发奖牌、写 `careerCompetitions`、触发结局、统计埋点）。 |
 | `national-team.js` | 国家集训队：CTT / CTS 计分与 IOI 名单选拔（`game.nationalTeamResults`）。 |
-| `share.js` | 分享功能：收集结算数据、编码成链接、解析别人的分享（`gameState` 里含随机种子与隐藏成就）。 |
+| `share.js` | 分享功能：收集结算数据、编码成链接、解析别人的分享（`gameState` 里含随机种子与成就 id 列表）。 |
 | `echarts.min.js` | 第三方库，省份地图用。**不要手改**。 |
 
 ### 4.4 `assets/`
@@ -171,7 +171,9 @@
 | 我想…… | 去哪改 |
 | --- | --- |
 | 加一个新天赋 | `lib/talent.js` 的 `registerDefaultTalents()` 里 `registerTalent({...})`。隐藏天赋名要同步加到 `HIDDEN_TALENTS`。 |
-| 加一个隐藏成就 | `lib/achievements.js` 的 `HIDDEN_ACHIEVEMENTS`。需要新数据就在 `lib/models.js` 的 `GameState.stats` 加字段，并用 `trackAction()` / `game.bumpStat()` / `game.maxStat()` 在玩法处埋点。 |
+| 加一个外显成就 | `lib/achievements.js` 的 `PUBLIC_ACHIEVEMENTS`（玩家看得见名字和条件，用来指方向）。 |
+| 加一个隐藏成就 | `lib/achievements.js` 的 `HIDDEN_ACHIEVEMENTS`（必须给 `hint`，不许剧透）。 |
+| 给成就加新统计 | 在 `lib/models.js` 的 `GameState.stats` 加字段，并用 `trackAction()` / `game.bumpStat()` / `game.maxStat()` 在**真正执行操作**的地方埋点（别在打开弹窗时埋）。 |
 | 加一个出境国家 / 彩蛋 | `lib/countries.js`：`COUNTRIES` 加条目，`OVERSEAS_COUNTRY_EFFECTS` 加同名函数；`country.html` 同步加「传闻」。 |
 | 加一个随机事件 | `events.js` 的 `registerDefaultEvents()`。 |
 | 调数值平衡 | `lib/constants.js`（优先用「全局增幅变量」），个别值在 `lib/provinces.js` / `lib/facilities.js` / `lib/countries.js`。 |

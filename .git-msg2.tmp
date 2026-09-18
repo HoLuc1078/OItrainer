@@ -1,0 +1,14 @@
+feat: 成就拆成「外显 38 + 隐藏 55」两栏，隐藏天赋名称去掉「(隐藏)」后缀
+
+新增：
+- 外显成就 38 个（PUBLIC_ACHIEVEMENTS）：明牌目标，锁着的时候也显示名字、条件与进度条
+  覆盖第一次训练 / 打进 NOIP / 站上 NOI / 经费 25 万 / 设施起步 / 十周平安等里程碑
+- 成就面板顶部加两栏 Tab（🏅 成就 / ❓ 隐藏成就），默认停在外显一栏，切换函数 oiAchTab()
+- 顶栏徽章改为显示两类合计（已解锁 / 93）
+
+调整：
+- 隐藏天赋名称不再追加「 (隐藏)」后缀，直接显示本名（保留虚紫边框作为区分）
+- AchievementManager 增加 kind 维度：list/total/countOf/countsByCategory/sectionHtml 均支持按类筛选
+
+文档：
+- README / CHANGELOG / AGENTS.md 同步成就分类、数量与新增成就的写法
