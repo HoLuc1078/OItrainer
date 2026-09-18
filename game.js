@@ -313,6 +313,7 @@ function calculateTrainingPressure(task, intensity) {
 }
 
 function trainStudentsWithTask(task, intensity) {
+  trackAction('trainings');
   log(`开始做题训练：${task.name}（难度${task.difficulty}，强度${intensity===1?'轻':intensity===2?'中':'重'}）`);
   const __before = typeof __createSnapshot === 'function' ? __createSnapshot() : null;
   
@@ -700,6 +701,7 @@ function computeOutingCostQuadratic(difficulty_choice, province_choice, particip
 }
 
 function outingTrainingWithSelection(difficulty_choice, province_choice, selectedNames, inspireTalents){
+  trackAction('outings');
   const target = PROVINCES[province_choice];
   const __before = typeof __createSnapshot === 'function' ? __createSnapshot() : null;
   const selectedStudents = game.students.filter(s => s && s.active && selectedNames.includes(s.name));
@@ -809,7 +811,7 @@ function outingTrainingWithSelection(difficulty_choice, province_choice, selecte
     
     if(inspireTalents && inspireTalents.length > 0){
       for(const talentName of inspireTalents){
-        if(Math.random() < 0.3){
+        if(getRandom() < 0.3){
           if(!s.talents.has(talentName)){
             s.talents.add(talentName);
             pushEvent({ 
@@ -1034,7 +1036,7 @@ function overseasTrainingWithSelection(difficulty_choice, country_choice, select
             for (const talentName of inspireTalents) {
                 // 隐藏天赋的激发概率略高（35%）
                 const probability = HIDDEN_TALENTS.includes(talentName) ? 0.25 : 0.3;
-                if (Math.random() < probability) {
+                if (getRandom() < probability) {
                     if (!s.talents.has(talentName)) {
                         s.talents.add(talentName);
 
@@ -1173,8 +1175,11 @@ function evaluateQuitRisk(s){
 
     // 1. 压力回落：退队倾向自动清除
     if(pressure < tendencyThreshold){
+      const hadTendency = Number(s.quit_tendency_weeks || 0) >= 1 || !!s.quit_grace_pending;
       s.quit_tendency_weeks = 0;
       s.quit_grace_pending = false;
+      // 悬崖勒马：确实把顶到退队线的人拉回来了
+      if(hadTendency) trackAction('rescues');
       return { action: 'clear' };
     }
 
@@ -1184,6 +1189,7 @@ function evaluateQuitRisk(s){
     if(weeks < 1){
       s.quit_tendency_weeks = 1;
       s.quit_grace_pending = true;
+      trackAction('quitTendencies');
       return { action: 'protected', protected: true, graceConsumed: false };
     }
 
@@ -1430,7 +1436,9 @@ function safeWeeklyUpdate(weeks = 1) {
   if (checkAndTriggerEnding()) {
     return;
   }
-  
+
+  __trackWeeklySnapshot();
+
   const sorted = Array.isArray(competitions) ? competitions.slice().sort((a, b) => a.week - b.week) : [];
   let nextComp = sorted.find(c => c.week > currWeek());
   let weeksToComp = nextComp ? (nextComp.week - currWeek()) : Infinity;
@@ -1556,7 +1564,13 @@ function triggerGameEnding(reason) {
     // 隐藏成就：破产也是一种结局
     try {
       if (!game.stats) game.stats = {};
-      if (normalizeEndingReason(normalized) === '经费不足') game.stats.bankruptEnding = true;
+      const __endReason = normalizeEndingReason(normalized);
+      if (__endReason === '经费不足') game.stats.bankruptEnding = true;
+      if (__endReason === '赛季结束' || __endReason === '顶尖结局' || __endReason === 'AKIOI') game.stats.seasonFinished = true;
+      if (__endReason === '无学生' || __endReason === '晋级链断裂') game.stats.badEnding = true;
+      if (__endReason === '辞职') game.stats.resigned = true;
+      game.stats.finalEndingReason = __endReason;
+      __trackWeeklySnapshot();
       try { if (window.AchievementManager) window.AchievementManager.checkAll(game); } catch (e) { }
     } catch (e) { }
     pushEvent({ 
@@ -1620,6 +1634,7 @@ function evictSingle(idx){
   if(!student || student.active === false) return;
   try{ if(typeof window !== 'undefined' && window.__OI_DEBUG_ENDING) console.debug('[ENDING DEBUG] evictSingle called idx=', idx, 'student=', student.name, 'preActive=', student.active); }catch(e){}
   student.active = false;
+  trackAction('evictions');
   game.reputation -= EVICT_REPUTATION_COST;
   if(game.reputation < 0) game.reputation = 0;
   log(`劝退学生 ${student.name}，声誉 -${EVICT_REPUTATION_COST}`);
@@ -1641,8 +1656,118 @@ function rest1Week(){
   renderAll();
 }
 
+/* ========== 随机流的存读档接续 ==========
+ * 目的：同种子 + 同操作 = 同结果，即使中间存过档、刷新过页面。
+ *   - 存档前把当前随机流快照写进 game.rngState；
+ *   - 读档时按 game.randomSeed 重新播种，再用快照把指针挪回原处。
+ */
+function __captureRngIntoGame(){
+  try{
+    if(!game) return;
+    if(typeof getRandomState === 'function'){
+      const st = getRandomState();
+      if(st) game.rngState = st;
+    }
+  }catch(e){ console.error('__captureRngIntoGame failed', e); }
+}
+
+function __restoreRngFromGame(){
+  try{
+    if(!game) return;
+    const seed = game.randomSeed;
+    if(seed === undefined || seed === null) return; // 老存档 / 未播种：保持现状
+    if(typeof restoreRandomState === 'function' && game.rngState){
+      if(restoreRandomState(game.rngState)) return;
+    }
+    if(typeof setRandomSeed === 'function') setRandomSeed(seed);
+  }catch(e){ console.error('__restoreRngFromGame failed', e); }
+}
+
+/* ========== 行动 / 状态统计埋点 ==========
+ * 供隐藏成就读取。纯计数，不参与任何随机判定。
+ */
+function trackAction(key, amount){
+  try{
+    if(!game) return;
+    if(typeof game.bumpStat === 'function'){ game.bumpStat(key, amount === undefined ? 1 : amount); return; }
+    if(!game.stats) game.stats = {};
+    game.stats[key] = Number(game.stats[key] || 0) + (amount === undefined ? 1 : amount);
+  }catch(e){ /* 统计失败不影响游戏 */ }
+}
+
+/** 每周/每次行动后刷新一次"历史极值"类统计 */
+function __trackWeeklySnapshot(){
+  try{
+    if(!game || typeof game.maxStat !== 'function') return;
+    game.maxStat('maxBudget', game.budget);
+    game.minStat('minBudget', game.budget);
+    game.maxStat('maxReputation', game.reputation);
+    let maxP = 0, sickNow = 0;
+    (game.students || []).forEach(function(s){
+      if(!s || s.active === false) return;
+      const p = Number(s.pressure || 0);
+      if(p > maxP) maxP = p;
+      if(Number(s.sick_weeks || 0) > 0) sickNow++;
+    });
+    game.maxStat('maxPressureSeen', maxP);
+    game.maxStat('sickAtOnce', sickNow);
+    game.maxStat('maxParty', (game.students || []).filter(function(s){ return s && s.active !== false; }).length);
+  }catch(e){ /* ignore */ }
+}
+
+/**
+ * 读档时把 JSON 里退化成数组 / 对象的 Set 还原回来。
+ * JSON 没有 Set 类型：
+ *   - saveGame 的 replacer 会把 Set 写成数组；
+ *   - 更老的存档（没走 replacer）会写成 {} 或 {"a":true}。
+ * 不还原的话，game.completedCompetitions.has / qualification[x][name].has 会直接抛错。
+ */
+function __restoreSetFields(game, o){
+  try{
+    if(!game) return;
+    // 1. 已完成的比赛
+    const cc = o ? o.completedCompetitions : undefined;
+    if(cc instanceof Set) game.completedCompetitions = cc;
+    else if(Array.isArray(cc)) game.completedCompetitions = new Set(cc);
+    else if(cc && typeof cc === 'object') game.completedCompetitions = new Set(Object.keys(cc).filter(function(k){ return cc[k]; }));
+    else game.completedCompetitions = new Set();
+
+    // 2. 晋级资格：qualification = [ { 比赛名: Set(学生名) }, ... ]
+    const order = (typeof COMPETITION_ORDER !== 'undefined' && Array.isArray(COMPETITION_ORDER)) ? COMPETITION_ORDER : [];
+    const q = o ? o.qualification : undefined;
+    const halves = [];
+    const halfCount = Math.max(2, Array.isArray(q) ? q.length : 0);
+    for(let i = 0; i < halfCount; i++){
+      const src = (Array.isArray(q) ? q[i] : null) || {};
+      const out = {};
+      order.forEach(function(name){
+        const v = src[name];
+        if(v instanceof Set) out[name] = v;
+        else if(Array.isArray(v)) out[name] = new Set(v);
+        else if(v && typeof v === 'object') out[name] = new Set(Object.keys(v).filter(function(k){ return v[k]; }));
+        else out[name] = new Set();
+      });
+      // 保留可能存在的自定义键
+      Object.keys(src).forEach(function(k){ if(!(k in out)) out[k] = src[k]; });
+      halves.push(out);
+    }
+    game.qualification = halves;
+
+    // 3. 每名学生的天赋（注意：必须在学生被实例化成 Student 之后调用，
+    //    否则随后的 map 会把已经还原好的 Set 再当成普通对象读成空集）
+    (game.students || []).forEach(function(s){
+      if(!s) return;
+      if(s.talents instanceof Set) return;
+      if(Array.isArray(s.talents)) s.talents = new Set(s.talents);
+      else if(s.talents && typeof s.talents === 'object') s.talents = new Set(Object.keys(s.talents).filter(function(k){ return s.talents[k]; }));
+      else s.talents = new Set();
+    });
+  }catch(e){ console.error('__restoreSetFields failed', e); }
+}
+
 function saveGame(silent = false){ 
   try{
+    __captureRngIntoGame();
     const saveData = JSON.parse(JSON.stringify(game, (key, value) => {
       if(value instanceof Set){
         return Array.from(value);
@@ -1675,6 +1800,8 @@ function loadGame(){ try{
     let o = JSON.parse(raw);
     game = Object.assign(new GameState(), o);
   window.game = game;
+  // 先把随机流接回存档时的位置，后面的补算（如重建本周题目）才和原来一致
+  __restoreRngFromGame();
   game.facilities = Object.assign(new Facilities(), o.facilities);
   /* 存档迁移：旧版设施(dorm/canteen)转换为新版(fan/network) */
   if(typeof o.facilities.dorm !== 'undefined' && typeof o.facilities.fan === 'undefined'){
@@ -1686,13 +1813,16 @@ function loadGame(){ try{
   game.facilities.computer_room = 1; // 机房始终为1
   game.students = (o.students || []).map(s => {
     const student = Object.assign(new Student(), s);
-    if(s.talents && Array.isArray(s.talents)){
+    if(s.talents instanceof Set){
+      student.talents = new Set(s.talents);
+    } else if(s.talents && Array.isArray(s.talents)){
       student.talents = new Set(s.talents);
     } else if(s.talents && typeof s.talents === 'object'){
       student.talents = new Set(Object.keys(s.talents).filter(k => s.talents[k]));
     }
     return student;
   });
+  __restoreSetFields(game, o);
   
   // 恢复本周题目：如果存档中没有或已失效，重新选择（基础7道+资料库额外题目）
   if (!game.weeklyTasks || !Array.isArray(game.weeklyTasks) || game.weeklyTasks.length === 0) {
@@ -1711,7 +1841,7 @@ function silentLoad(){ try{
   let raw = null;
   try{ raw = sessionStorage.getItem('oi_coach_save'); }catch(e){ raw = null; }
   try{ if(!raw) raw = localStorage.getItem('oi_coach_save'); }catch(e){}
-  if(!raw) return false; let o = JSON.parse(raw); game = Object.assign(new GameState(), o); window.game = game; game.facilities = Object.assign(new Facilities(), o.facilities); if(typeof o.facilities.dorm !== 'undefined' && typeof o.facilities.fan === 'undefined'){ game.facilities.fan = Math.min(o.facilities.dorm || 0, FACILITY_DEFS.fan.maxLevel); } if(typeof o.facilities.canteen !== 'undefined' && typeof o.facilities.network === 'undefined'){ game.facilities.network = 0; } game.facilities.computer_room = 1; game.students = (o.students || []).map(s => { const student = Object.assign(new Student(), s); if(s.talents && Array.isArray(s.talents)){ student.talents = new Set(s.talents); } else if(s.talents && typeof s.talents === 'object'){ student.talents = new Set(Object.keys(s.talents).filter(k => s.talents[k])); } return student; }); 
+  if(!raw) return false; let o = JSON.parse(raw); game = Object.assign(new GameState(), o); window.game = game; __restoreRngFromGame(); game.facilities = Object.assign(new Facilities(), o.facilities); if(typeof o.facilities.dorm !== 'undefined' && typeof o.facilities.fan === 'undefined'){ game.facilities.fan = Math.min(o.facilities.dorm || 0, FACILITY_DEFS.fan.maxLevel); } if(typeof o.facilities.canteen !== 'undefined' && typeof o.facilities.network === 'undefined'){ game.facilities.network = 0; } game.facilities.computer_room = 1; game.students = (o.students || []).map(s => { const student = Object.assign(new Student(), s); if(s.talents instanceof Set){ student.talents = new Set(s.talents); } else if(s.talents && Array.isArray(s.talents)){ student.talents = new Set(s.talents); } else if(s.talents && typeof s.talents === 'object'){ student.talents = new Set(Object.keys(s.talents).filter(k => s.talents[k])); } return student; }); __restoreSetFields(game, o); 
   
   // 恢复本周题目：如果存档中没有或已失效，重新选择（基础7道+资料库额外题目）
   if (!game.weeklyTasks || !Array.isArray(game.weeklyTasks) || game.weeklyTasks.length === 0) {
@@ -1746,9 +1876,20 @@ function startFromStartPage(){
   window.location.href = url;
 }
 
-function initGame(difficulty, province_choice, student_count){
+function initGame(difficulty, province_choice, student_count, seed){
   game = new GameState();
   window.game = game;
+  // 每局一个 token：让"最近推荐过的题目"这类跨局缓存自动失效。
+  // 没有它的话，同种子再开一局会拿到和上一局不同的题目，破坏可复现性。
+  try{
+    window.__oiGameToken = (Number(window.__oiGameToken) || 0) + 1;
+    game.gameToken = window.__oiGameToken;
+  }catch(e){ game.gameToken = 1; }
+  // 记录本局种子：存读档后据此把随机流接回去（同种子 + 同操作 = 同结果）
+  if(seed !== undefined && seed !== null){
+    game.randomSeed = seed;
+    try{ game.rngState = (typeof getRandomState === 'function') ? getRandomState() : null; }catch(e){}
+  }
   game.difficulty = clampInt(difficulty,1,3);
   let prov = PROVINCES[province_choice] || PROVINCES[1];
   game.province_id = province_choice;
@@ -1844,6 +1985,7 @@ function initGame(difficulty, province_choice, student_count){
     game.students.push(newStud);
   }
   game.updateWeather();
+  __trackWeeklySnapshot();
   
   // 初始化第一周的题目（基础7道+资料库额外题目）
   if (typeof selectRandomTasks === 'function') {
@@ -1865,6 +2007,9 @@ function initGame(difficulty, province_choice, student_count){
     }
   }catch(e){ console.error('initGame trigger game_start talents failed', e); }
   
+  // 记下开局结束时的随机流快照，刷新页面 / 读档后可以从这里继续
+  try{ if(typeof getRandomState === 'function'){ const st = getRandomState(); if(st) game.rngState = st; } }catch(e){}
+
   log("初始化完成，开始游戏！");
 }
 
@@ -1902,16 +2047,23 @@ window.onload = ()=>{
       const count = clampInt(parseInt(qs.get('c')||5),3,10);
       
       const isDaily = qs.get('daily') === '1';
-      const seed = qs.get('seed') ? parseInt(qs.get('seed')) : null;
-      
-      if(isDaily && seed !== null){
-        if(typeof setRandomSeed === 'function'){
-          setRandomSeed(seed);
-          console.log(`[今日挑战] 种子已设置: ${seed}`);
-        } else {
-          console.warn('[今日挑战] setRandomSeed 函数未定义，种子设置失败');
-        }
-        initGame(diff, prov, count);
+      const urlSeed = qs.get('seed') ? parseInt(qs.get('seed')) : null;
+      // 今日挑战用「日期派生的固定种子」；普通开局用一个每局不同、但局内可复现的随机种子。
+      // 两种情况下随机数都来自同一个可种子化的随机源（见 lib/utils.js 顶部的约定）。
+      const seed = (isDaily && urlSeed !== null)
+        ? urlSeed
+        : ((urlSeed !== null && !isNaN(urlSeed)) ? urlSeed : generateRandomSeed());
+
+      if(typeof setRandomSeed === 'function'){
+        setRandomSeed(seed);
+        console.log(`[${isDaily ? '今日挑战' : '随机种子'}] 种子已设置: ${seed}`);
+      } else {
+        console.warn('[Random] setRandomSeed 函数未定义，种子设置失败');
+      }
+
+      initGame(diff, prov, count, seed);
+
+      if(isDaily){
         game.isDailyChallenge = true;
         game.dailyChallengeSeed = seed;
         try{
@@ -1919,14 +2071,14 @@ window.onload = ()=>{
           if(dailyDate) game.dailyChallengeDate = dailyDate;
         }catch(e){}
         console.log(`[今日挑战] 游戏初始化完成，省份: ${prov}, 种子: ${seed}`);
-      } else {
-        if(typeof setRandomSeed === 'function'){
-          setRandomSeed(null);
-        }
-        initGame(diff, prov, count);
       }
       
-      try{ localStorage.setItem('oi_coach_save', JSON.stringify(game)); }catch(e){}
+      // 开局后自动落盘：必须走 saveGame（它会把 Set 转成数组，并保存随机流快照），
+      // 直接 JSON.stringify(game) 会让天赋这种 Set 变成 {}，刷新一次天赋就全没了。
+      try{
+        if(typeof saveGame === 'function') saveGame(true);
+        else sessionStorage.setItem('oi_coach_save', JSON.stringify(game));
+      }catch(e){ console.warn('开局自动存档失败', e); }
     } else {
       const ok = silentLoad();
       if(!ok){ window.location.href = 'start.html'; return; }

@@ -1,5 +1,42 @@
 # 更新日志
 
+## 2025-11-14 — 魔改 v1.4（随机数一致化 / 成就扩充 / 仓库说明书）
+
+### 新增
+- **随机数一致化（同种子 = 同结果）**：
+  - 所有影响游戏进程的随机数统一走 `getRandom()`（可种子化随机源），
+    清掉了散落在 `game.js` / `render.js` / `lib/countries.js` / `lib/talent.js` / `lib/contest-integration.js`
+    等处的 `Math.random()`。
+  - 随机源换成 **sfc32 + xmur3 播种**（`lib/utils.js` 的 `SeededRandom`）：同一个种子必然产出同一串数字，
+    分布也比原来的 xorshift 实现更均匀。
+  - **随机种子与随机流会写进存档**（`game.randomSeed` / `game.rngState`），
+    存读档、刷新页面之后随机流会接回原处，所以「同样的操作」依然是「同样的结果」。
+  - 普通开局现在也有种子（`generateRandomSeed()`），只是每局不同；
+    赛季结算页会显示本局种子，可以分享给别人复现。
+  - 纯装饰性随机（随机一言、DOM id、矩阵雨背景）改用 `getCosmeticRandom()`，不消耗种子流。
+  - 新增工具：`getCosmeticRandom()` / `withRandomSeed()` / `pickRandom()` / `weightedPick()` /
+    `getRandomState()` / `restoreRandomState()` / `generateRandomSeed()` / `describeRandomSeed()`。
+- **今日挑战重做**：种子改为由日期直接派生（`getDailyChallengeParams()` 不再用 `Math.sin` 近似），
+  同一天所有玩家的省份与种子完全一致，且与「什么时候点按钮」无关。
+- **隐藏成就从 17 个扩充到 55 个**：按「出境集训 / 队伍与教练 / 天赋 / 比赛 / 经营 / 心态 / 彩蛋」七类归档，
+  面板加了分类胶囊、分组标题和**未解锁进度条**（一眼看出还差多少）。
+  新增统计埋点：训练 / 加训 / 打工 / 娱乐 / 模拟赛 / 集训次数、天赋获得与失去、经费与声誉极值、
+  压力峰值、生病次数、劝退与挽救次数、比赛场次、满分场次、奖牌数、头名次数等。
+- **`AGENTS.md`**：仓库说明书 —— 每个文件是干什么的、随机数与「学生姓名是身份主键」两条铁律、
+  常见改动指引、存档兼容注意事项、提交与推送约定。
+
+### 修复
+- **开局自动存档会把天赋洗掉**：`?new=1` 开局后原本直接 `JSON.stringify(game)` 落盘，
+  而 `JSON.stringify` 会把天赋的 `Set` 变成 `{}`，刷新一次页面所有天赋都没了。现在改走 `saveGame()`。
+- **读档报 `game.completedCompetitions.has is not a function`**：JSON 没有 `Set` 类型，
+  读档时没有还原，导致渲染学生晋级状态时每次都抛错。新增 `__restoreSetFields()`
+  统一还原 `completedCompetitions`、`qualification`、学生 `talents`（顺序上有讲究，见 `AGENTS.md` 第 6 节）。
+- **同种子重开一局题目会变**：`lib/task.js` 里「最近推荐过的题目」是跨局共享的全局缓存，
+  现在用 `game.gameToken` 按局隔离。
+
+### 文档
+- `README.md` 更新了隐藏成就数量与随机种子说明；`shared.html` / 分享数据里带上了随机种子与成就。
+
 ## 2025-11-14 — 魔改 v1.3（退队保护）
 
 ### 新增

@@ -76,6 +76,7 @@ function debugzak() {
   }
   
   
+  try{ if(window.AchievementManager) window.AchievementManager.unlock('debug_user', game); }catch(e){}
   alert(`🔧 已创建"${superStudent.name}"\n 已跳转到第${game.week}周\n 已授予所有晋级资格\n`);
 }
 
@@ -147,6 +148,7 @@ function Fuck_CCF() {
         "欧皇"
     ];
     positiveTalents.forEach(talent => superStudent.addTalent(talent));
+    try{ if(window.AchievementManager) window.AchievementManager.unlock('debug_user', game); }catch(e){}
 
     // 添加到学生列表
     game.students.push(superStudent);
@@ -219,7 +221,7 @@ function chthollySummon() {
         }
     }
 
-    try { if (window.AchievementManager) window.AchievementManager.checkAll(game); } catch (e) { }
+    try { if (window.AchievementManager) { window.AchievementManager.unlock('debug_user', game); window.AchievementManager.checkAll(game); } } catch (e) { }
     if (typeof renderAll === 'function') renderAll();
 }
 
@@ -244,7 +246,7 @@ function kkksc03wzl() {
     wzl.addTalent("嬲选手");
     wzl.addTalent("你怎么知道我 AK 了");
     game.students.push(wzl);
-    try{ if(window.AchievementManager) window.AchievementManager.checkAll(game); }catch(e){}
+    try{ if(window.AchievementManager){ window.AchievementManager.unlock('debug_user', game); window.AchievementManager.checkAll(game); } }catch(e){}
     //好吧，下面还是得CV
     // 授予所有比赛晋级资格（当前学期和下学期）
     for (let halfIndex = 0; halfIndex <= 1; halfIndex++) {

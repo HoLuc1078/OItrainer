@@ -165,6 +165,8 @@
       const totalExpenses = o.totalExpenses || 0;
       const week = o.week || 0;
       const difficulty = o.difficulty || 2; // 默认为普通难度
+      const seedText = (o.dailyChallengeSeed || o.randomSeed) ? String(o.dailyChallengeSeed || o.randomSeed) : '';
+      const achCount = Array.isArray(o.achievements) ? o.achievements.length : 0;
       
       // 难度文本和颜色映射
       const difficultyMap = {
@@ -397,6 +399,8 @@
               <div>当前金额: <strong>¥${budget.toLocaleString()}</strong></div>
               <div>累计消费: <strong>¥${totalExpenses.toLocaleString()}</strong></div>
               <div>结束原因: <strong>${endingReason}</strong></div>
+              ${seedText ? '<div>随机种子: <strong>' + seedText + '</strong></div>' : ''}
+              ${achCount ? '<div>隐藏成就: <strong>' + achCount + ' 个</strong></div>' : ''}
             </div>
           </div>
         </div>

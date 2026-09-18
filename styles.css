@@ -1704,6 +1704,62 @@ body.comp-week .action-cards .action-card:not(#comp-only-action) {
   box-shadow: 0 2px 10px rgba(245,158,11,0.15);
 }
 
+/* 成就分类总览（一行小胶囊） */
+.ach-panel .ach-cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.ach-panel .ach-cat-chip {
+  font-size: 11.5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid #dbe3ec;
+  background: #f1f5f9;
+  color: #475569;
+  white-space: nowrap;
+}
+.ach-panel .ach-cat-chip.ach-cat-done {
+  border-color: rgba(245,158,11,0.6);
+  background: linear-gradient(120deg, rgba(245,158,11,0.20), rgba(236,72,153,0.18));
+  color: #92400e;
+  font-weight: 600;
+}
+
+/* 分类标题 */
+.ach-panel .ach-group-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+  margin: 14px 0 8px;
+  padding-left: 8px;
+  border-left: 3px solid rgba(245,158,11,0.7);
+}
+.ach-panel .ach-group-title .muted { font-weight: 400; }
+
+/* 未解锁成就的进度条 */
+.ach-card .ach-progress {
+  margin-top: 8px;
+  height: 5px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+.ach-card .ach-progress-bar {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #94a3b8, #64748b);
+  transition: width .25s ease;
+}
+.ach-card .ach-progress-text {
+  margin-top: 3px;
+  font-size: 11px;
+  text-align: right;
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+}
+
 
 
 

@@ -401,7 +401,8 @@ function renderAll(){
     const headerNextSmall = $('header-next-comp-small'); if(headerNextSmall) headerNextSmall.innerText = nextCompText;
     const headerWeatherText = $('header-weather-text'); if(headerWeatherText) headerWeatherText.innerText = weatherDesc;
     const headerTempHeader = $('header-temp-header'); if(headerTempHeader) headerTempHeader.innerText = tempText;
-  const q = QUOTES[ Math.floor(Math.random() * QUOTES.length) ];
+  // 随机一言属于纯装饰：用 getCosmeticRandom()，不要消耗游戏随机流
+  const q = QUOTES[ Math.floor(getCosmeticRandom() * QUOTES.length) ];
   $('daily-quote').innerText = q;
   let match = nextCompText.match(/还有(\d+)周/);
   let weeksLeft = match ? parseInt(match[1],10) : null;
@@ -1072,6 +1073,8 @@ function holdMockContestUI(){
       log(`参加网赛（${difficultyConfig.name}，免费）`);
     }
     
+    // 统计埋点：比赛真的开始了才算一场模拟赛
+    try{ if(typeof trackAction === 'function') trackAction('mockContests'); }catch(e){}
     if(typeof window.holdMockContestModalNew === 'function'){
       window.holdMockContestModalNew(isPurchased, difficultyConfig, questionTagsArray);
     } else {
@@ -1113,6 +1116,8 @@ function entertainmentUI(){
     if(opt.id === 5 && game.facilities.computer < 3){ alert("需要计算机等级 ≥ 3"); return; }
   const costAdj = Math.round(cost * (game.getExpenseMultiplier ? game.getExpenseMultiplier() : 1));
   if(game.budget < costAdj){ alert("经费不足"); return; }
+  // 统计埋点放在"真的执行了"这一步，取消弹窗不算一次娱乐
+  try{ if(typeof trackAction === 'function') trackAction('entertainments'); }catch(e){}
   game.recordExpense(costAdj, `娱乐活动：${opt.val}`);
     closeModal();
       for(let s of game.students){
@@ -1552,7 +1557,8 @@ function renderEndSummary(){
       ${o.isDailyChallenge ? `<div style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);color:white;padding:12px 16px;border-radius:8px;margin-bottom:16px;text-align:center;box-shadow:0 4px 6px rgba(0,0,0,0.1)">
         <div style="font-size:16px;font-weight:bold;margin-bottom:4px">📅 今日挑战</div>
         <div style="font-size:13px;opacity:0.9">${o.dailyChallengeDate || '日期未知'} · 种子: ${o.dailyChallengeSeed || 'N/A'}</div>
-      </div>` : ''}
+        <div style="font-size:12px;opacity:0.85;margin-top:4px">同一天所有玩家的开局完全一致：同样的操作会得到同样的结果。</div>
+      </div>` : (o.randomSeed !== undefined && o.randomSeed !== null ? '<div style="background:#f8fafc;border:1px dashed #cbd5e1;color:#475569;padding:10px 14px;border-radius:8px;margin-bottom:16px;text-align:center;font-size:13px">' + '🎲 本局随机种子: <strong>' + o.randomSeed + '</strong>' + '<div style="font-size:12px;color:#94a3b8;margin-top:4px">同一种子 + 同样的操作 = 同样的结果，可以分享出去让别人复现这一局。</div></div>' : '')}
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">
         <div>
           <h4>📈 基本信息</h4>
@@ -2434,12 +2440,13 @@ function getTrainingTask() {
         { name: '数学加训', ability: 'knowledge_math', difficulty: 40 },
         { name: '动态规划加训', ability: 'knowledge_dp', difficulty: 45 }
     ];
-    return tasks[Math.floor(Math.random() * tasks.length)]; // 随机选择
+    return pickRandom(tasks); // 随机选择（走种子随机源：同种子 + 同操作 = 同结果）
 }
 
 // 补充：执行加训逻辑（无行动值消耗，压力+50%）
 // 加训逻辑：包含压力计算+超100直接退队
 function executeExtraTraining(task) {
+    try{ if(typeof trackAction === 'function') trackAction('extraTrainings'); }catch(e){}
     const intensity = 3; // 加训强度设为高（压力增幅更大）
     window.log(`开始加训：${task.name}（强度：高）`);
 
@@ -2805,6 +2812,7 @@ function calculateStudentEarnings(thinking, coding, mental) {
  * 执行打工（带学生选择）
  */
 function executePartTimeJobWithSelection(selectedStudentNames) {
+    try{ if(typeof trackAction === 'function') trackAction('works'); }catch(e){}
     window.log(`开始打工：${selectedStudentNames.join('、')} 通过兼职获得资金`);
 
     const weatherFactor = window.game.getWeatherFactor();

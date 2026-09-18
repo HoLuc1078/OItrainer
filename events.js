@@ -120,6 +120,7 @@
             
             if(getRandom() < pr){
               s.sick_weeks = utils.uniformInt(1,2);
+              try{ if(typeof trackAction === 'function') trackAction('sicknesses'); }catch(e){}
               sickList.push(s.name);
               // trigger talent: sickness event for this student
               try{ if(typeof s.triggerTalents === 'function'){ s.triggerTalents('sickness', { weeks: s.sick_weeks }); } }catch(e){ console.error('triggerTalents sickness', e); }
@@ -1302,6 +1303,7 @@
             try{
               if (game) {
                 game._coach_speech_count = (game._coach_speech_count || 0) + 1;
+                try{ if(typeof trackAction === 'function') trackAction('talks'); }catch(_){}
               } else {
                 window._coach_speech_count = (window._coach_speech_count || 0) + 1;
               }
