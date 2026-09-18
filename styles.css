@@ -59,6 +59,7 @@ body.theme-purple{--accent:#805ad5;--bg:#faf5ff;--card:#ffffff;--muted:#666}
 .btn.upgrade.ghost{background:transparent;border:1px solid #ddd;color:#333}
 .modal{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:999}
 .dialog{width:820px;max-width:96%;background:#fff;padding:18px;border-radius:10px;max-height:85vh;overflow:auto;position:relative}
+.dialog-wide{width:96%;max-width:1100px}
 .dialog h3{margin-top:0}
 .flex-between{display:flex;justify-content:space-between;align-items:center}
 footer{margin-top:16px;text-align:center;color:var(--muted)}
@@ -1138,6 +1139,590 @@ body.comp-week .action-cards .action-card:not(#comp-only-action) {
   font-size: 9px;
   padding: 1px 5px;
   margin-left: 4px;
+}
+
+/* ========== start.html 启动页专属样式 ========== */
+
+/* 启动蒙版 */
+.oi-start-mask {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  background: linear-gradient(180deg, rgba(10,25,47,0.95), rgba(22,32,54,0.95)), url('assets/start-bg.jpg') center/cover no-repeat;
+  color: #fff;
+  padding: 20px;
+  box-sizing: border-box;
+  flex-direction: column;
+}
+.oi-start-mask .mask-content {
+  max-width: 880px;
+  text-align: center;
+  backdrop-filter: blur(2px);
+}
+.oi-start-mask h2 {
+  font-size: 34px;
+  margin: 0 0 12px 0;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+}
+.oi-start-mask p {
+  margin: 0 0 18px 0;
+  color: rgba(255,255,255,0.9);
+  font-size: 16px;
+}
+.oi-start-mask .mask-actions {
+  margin-top: 8px;
+}
+.oi-start-mask .btn {
+  min-width: 150px;
+  padding: 10px 16px;
+  font-size: 16px;
+  border-radius: 6px;
+}
+.oi-start-mask .btn-start {
+  background: #38a169;
+  border: none;
+  color: white;
+}
+.oi-start-mask .btn-skip {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.2);
+  color: white;
+  margin-left: 8px;
+}
+.oi-start-subtitle {
+  font-size: 16px;
+  margin: 6px 0 12px;
+  color: rgba(255,255,255,0.95);
+  font-weight: 400;
+  line-height: 1.9;
+}
+
+/* 免责声明 */
+.disclaimer {
+  font-size: 13px;
+  color: #444;
+  margin: 8px 0 18px 0;
+  line-height: 1.6;
+  text-align: left;
+  background: rgba(240,240,240,0.9);
+  padding: 10px 12px;
+  border-radius: 8px;
+  max-width: 960px;
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
+  opacity: 0.98;
+}
+
+/* 地图容器 */
+#map-container {
+  width: 100%;
+  max-width: 680px;
+  height: 520px;
+  margin: 10px auto;
+  border: 1px solid #e0e0e0;
+  background-color: #fafbfc;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  border-radius: 8px;
+  cursor: pointer;
+}
+#prov-info-panel {
+  text-align: center;
+  margin-top: 4px;
+  font-size: 14px;
+  color: #666;
+  min-height: 22px;
+}
+#prov-info-panel .prov-type-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.prov-type-strong { background: #e8f5e9; color: #2e7d32; }
+.prov-type-normal { background: #fff3e0; color: #e65100; }
+.prov-type-weak   { background: #fce4ec; color: #c62828; }
+
+/* 省份选择页统一详情面板 */
+.prov-detail-panel {
+  transition: opacity 0.2s ease;
+}
+.prov-detail-section {
+  margin-bottom: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+}
+.prov-detail-section:last-child {
+  margin-bottom: 0;
+}
+.prov-detail-label {
+  display: inline-block;
+  min-width: 56px;
+  font-weight: 600;
+  color: #374151;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.prov-detail-text {
+  color: #555;
+  line-height: 1.7;
+}
+.facility-init-item {
+  display: inline-block;
+  margin: 1px 3px;
+  padding: 1px 7px;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.facility-init-name {
+  color: #374151;
+  font-weight: 500;
+}
+.facility-init-level {
+  color: #6b7280;
+  margin-left: 3px;
+}
+
+/* 三步向导 */
+.step-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin-bottom: 20px;
+}
+.step-dot {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700;
+  background: #e0e0e0; color: #999;
+  transition: all 0.3s;
+}
+.step-dot.active { background: var(--accent); color: #fff; }
+.step-dot.done   { background: #67c23a; color: #fff; }
+.step-line {
+  width: 60px; height: 2px;
+  background: #e0e0e0;
+  transition: background 0.3s;
+}
+.step-line.done { background: #67c23a; }
+.step-body { min-height: 520px; }
+.step-body > div { display: none; }
+.step-body > div.active { display: block; }
+.step-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+/* ========== 难度轮播（三卡并排展示） ========== */
+.diff-carousel-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin: 16px 0 20px;
+  user-select: none;
+  width: 100%;
+  position: relative;
+}
+
+/* 轮播视口：承载三张卡片，不裁剪溢出 */
+.carousel-viewport {
+  flex: 1;
+  max-width: 780px;
+  height: 320px;
+  overflow: visible;
+  position: relative;
+}
+
+/* 轨道：flex 并排三张卡片，居中对齐 */
+.carousel-track {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+/* ===== 设施平铺卡片 ===== */
+.facility-flat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+  max-height: 55vh;
+  overflow: auto;
+  padding: 4px;
+}
+
+.facility-flat-grid::-webkit-scrollbar {
+  width: 6px;
+}
+.facility-flat-grid::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+.facility-flat-grid::-webkit-scrollbar-thumb {
+  background: #cbd5e0;
+  border-radius: 3px;
+}
+.facility-flat-grid::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.facility-flat-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.facility-flat-card:hover {
+  box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+  transform: translateY(-1px);
+  border-color: #cbd5e0;
+}
+
+/* 已满级卡片 — 与项目绿色语义一致 */
+.facility-flat-card.status-built {
+  border-color: #e5e7eb;
+  background: #fff;
+}
+
+/* 可升级/可建造卡片 — 使用主题强调色，与选中卡片风格统一 */
+.facility-flat-card.status-available {
+  border-color: var(--accent);
+  background: linear-gradient(135deg, rgba(43,108,176,0.03) 0%, #ffffff 100%);
+}
+
+/* 卡片头部 */
+.facility-flat-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.facility-flat-card-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.facility-flat-card-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a202c;
+  flex: 1;
+}
+
+/* 徽章 — 复用项目 .tag / .label-pill 色系 */
+.facility-flat-card-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+.facility-flat-card-badge.built {
+  background: #eef6ff;
+  color: #1b4f8a;
+}
+.facility-flat-card-badge.available {
+  background: #f3f4f6;
+  color: #4a5568;
+}
+
+.facility-flat-card-level {
+  font-size: 12px;
+  font-weight: 600;
+  color: #4a5568;
+}
+
+.facility-flat-card-desc {
+  font-size: 11px;
+  color: #666;
+  line-height: 1.5;
+  min-height: 32px;
+}
+
+/* MK 进度条 */
+.facility-flat-card-mk-bar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.facility-flat-card-mk-bar .mk-dot {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: #f3f4f6;
+  color: #a0aec0;
+  border: 1px solid #e5e7eb;
+}
+.facility-flat-card-mk-bar .mk-dot.built {
+  background: #eef6ff;
+  color: #1b4f8a;
+  border-color: #bee3f8;
+}
+.facility-flat-card-mk-bar .mk-dot.next {
+  background: #fff;
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.facility-flat-card-mk-bar .mk-dot.locked {
+  background: #f9fafb;
+  color: #cbd5e0;
+  border-color: #e5e7eb;
+}
+
+/* 升级费用 */
+.facility-flat-card-cost {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  text-align: center;
+  padding: 6px 10px;
+  background: rgba(43,108,176,0.06);
+  border-radius: 6px;
+  margin-top: 2px;
+}
+.facility-flat-card-cost.built {
+  color: #4a5568;
+  background: #f3f4f6;
+}
+.facility-flat-card-cost.cant-afford {
+  color: #e53e3e;
+  background: #fff5f5;
+}
+
+/* 机房根节点 */
+.facility-flat-card.root-node {
+  cursor: default;
+}
+.facility-flat-card.root-node:hover {
+  transform: none;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  border-color: #e5e7eb;
+}
+.facility-flat-card.root-node .facility-flat-card-name {
+  color: #2c5282;
+}
+
+/* 单张轮播卡片 */
+.diff-carousel-card {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 20px;
+  background: var(--card);
+  border: 2px solid transparent;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+  cursor: pointer;
+  /* 卡片容器：弹性动画 */
+  transition: width 0.30s cubic-bezier(0.34, 1.56, 0.64, 1),
+              height 0.30s cubic-bezier(0.34, 1.56, 0.64, 1),
+              transform 0.30s cubic-bezier(0.34, 1.56, 0.64, 1),
+              opacity 0.22s ease,
+              box-shadow 0.30s cubic-bezier(0.34, 1.56, 0.64, 1),
+              border-color 0.22s ease,
+              margin 0.30s cubic-bezier(0.34, 1.56, 0.64, 1),
+              z-index 0.30s step-end;
+  position: relative;
+  /* 默认：侧边卡片 — 缩小、虚化 */
+  width: 150px;
+  height: 180px;
+  opacity: 0.4;
+  transform: scale(0.78);
+  z-index: 1;
+  margin: 0 -14px;
+  filter: blur(0px);
+}
+
+/* 侧边卡片轻微模糊（非活跃） */
+.diff-carousel-card:not(.carousel-active) {
+  filter: blur(0.6px);
+}
+
+/* 选中/中间卡片 — 放大、高亮、前移 */
+.diff-carousel-card.carousel-active {
+  width: 300px;
+  height: 300px;
+  opacity: 1;
+  transform: scale(1);
+  z-index: 3;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.13), 0 0 0 4px rgba(43,108,176,0.10);
+  border-color: rgba(43,108,176,0.28);
+  margin: 0 4px;
+  filter: blur(0);
+  cursor: default;
+}
+
+/* 难度名称：侧边状态 — 紧凑、轻量 */
+.diff-card-name {
+  font-size: 18px;
+  font-weight: 400;
+  color: #1a202c;
+  letter-spacing: 1px;
+  transition: font-weight 0.08s step-end,
+              letter-spacing 0.20s cubic-bezier(0.34, 1.56, 0.64, 1),
+              font-size 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+              opacity 0.15s ease;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+/* 选中卡片名称：瞬间加粗、字间距弹开 */
+.diff-carousel-card.carousel-active .diff-card-name {
+  font-weight: 900;
+  letter-spacing: 6px;
+  font-size: 36px;
+  opacity: 1;
+}
+
+/* 难度简述：侧边状态 */
+.diff-card-desc {
+  font-size: 11px;
+  color: var(--muted);
+  transition: font-size 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+              opacity 0.15s ease;
+  text-align: center;
+  max-width: 130px;
+  line-height: 1.5;
+}
+
+/* 选中卡片简述 */
+.diff-carousel-card.carousel-active .diff-card-desc {
+  font-size: 16px;
+  max-width: 260px;
+  opacity: 1;
+}
+
+/* 左右箭头按钮 — 更有张力 */
+.carousel-arrow {
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  border: 2px solid #ddd;
+  background: var(--card);
+  color: #333;
+  font-size: 24px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  flex-shrink: 0;
+  z-index: 4;
+  position: relative;
+}
+.carousel-arrow:hover {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  box-shadow: 0 6px 20px rgba(43,108,176,0.25);
+  transform: scale(1.15);
+}
+.carousel-arrow:active {
+  transform: scale(0.9);
+}
+
+/* 详情面板：整体淡入+上浮 */
+.diff-detail-panel {
+  margin-top: 20px;
+  text-align: center;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.diff-detail-panel.diff-detail-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* 详情描述文本 */
+.diff-detail-desc {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.7;
+  max-width: 480px;
+  margin: 0 auto 16px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+/* 属性卡片容器 */
+.diff-detail-stats {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+/* 属性卡片 */
+.diff-stat-item {
+  background: #f8fafc;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  padding: 12px 22px;
+  text-align: center;
+  min-width: 90px;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.3s ease, transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+/* 详情面板可见时，子元素淡入+弹跳 */
+.diff-detail-panel.diff-detail-visible .diff-detail-desc,
+.diff-detail-panel.diff-detail-visible .diff-stat-item {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* 各子元素错开淡入 */
+.diff-detail-panel.diff-detail-visible .diff-stat-item:nth-child(1) { transition-delay: 0.06s; }
+.diff-detail-panel.diff-detail-visible .diff-stat-item:nth-child(2) { transition-delay: 0.13s; }
+.diff-detail-panel.diff-detail-visible .diff-stat-item:nth-child(3) { transition-delay: 0.20s; }
+
+.diff-stat-item:hover {
+  border-color: var(--accent);
+  box-shadow: 0 4px 16px rgba(43,108,176,0.12);
+  transform: translateY(-3px);
+}
+.diff-stat-key {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 6px;
+  letter-spacing: 0.5px;
+}
+.diff-stat-val {
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent);
 }
 
 

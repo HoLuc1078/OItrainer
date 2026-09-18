@@ -210,3 +210,22 @@ function kkksc03wzl() {
 //我本来没打算这么写来着，但是有趣的是Deepseek严厉的批评了我
 //所以特意去英语速成啦
 //至于这个应该没人看见，因为是机器判题
+/**
+ * 调试函数：直接打开设施升级页面
+ * 使用方法：在浏览器控制台中输入 debugFacility() 即可
+ */
+function debugFacility() {
+  if(typeof game === 'undefined' || !game) {
+    console.error('游戏未初始化，请先开始游戏');
+    alert('请先开始游戏再使用调试功能');
+    return;
+  }
+
+  if(typeof showFacilityUpgradeModal === 'function') {
+    console.log('[调试] 打开设施升级页面...');
+    showFacilityUpgradeModal();
+  } else {
+    console.error('showFacilityUpgradeModal 函数未加载');
+    alert('设施升级模块未加载，请检查 facilities.js 是否已引入');
+  }
+}

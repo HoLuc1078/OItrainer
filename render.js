@@ -413,9 +413,10 @@ function renderAll(){
         personalComfort = baseComfort + weatherEffect * 2;
         personalComfort = Math.max(0, Math.min(100, personalComfort));
       }
+      /* 美食家天赋：享受设施舒适度1.5倍加成 */
       if(s.talents && s.talents.has('美食家')){
-        const canteenBonus = 3 * (game.facilities.canteen - 1);
-        personalComfort += canteenBonus;
+        const facilityComfort = game.facilities.getComfortBonus();
+        personalComfort += facilityComfort * 0.5;
         personalComfort = Math.max(0, Math.min(100, personalComfort));
       }
       
@@ -432,20 +433,22 @@ function renderAll(){
   
   const comfortEl = $('comfort-val');
   if(comfortEl) comfortEl.innerText = Math.floor(displayComfort);
+  
+  /* 更新隐藏的设施数据span（向后兼容） */
   $('fac-computer').innerText = game.facilities.computer;
   $('fac-library').innerText = game.facilities.library;
   $('fac-ac').innerText = game.facilities.ac;
-  $('fac-dorm').innerText = game.facilities.dorm;
-  $('fac-canteen').innerText = game.facilities.canteen;
+  $('fac-dorm').innerText = game.facilities.fan;
+  $('fac-canteen').innerText = game.facilities.network;
   $('fac-maint').innerText = game.facilities.getMaintenanceCost();
   
   // 同步更新设施状态显示区域（只读）
   const displayEls = {
-    'fac-computer-display': game.facilities.computer,
-    'fac-library-display': game.facilities.library,
-    'fac-ac-display': game.facilities.ac,
-    'fac-dorm-display': game.facilities.dorm,
-    'fac-canteen-display': game.facilities.canteen,
+    'fac-computer-display': (game.facilities.computer > 0 ? 'mk' + game.facilities.computer : '无'),
+    'fac-library-display': (game.facilities.library > 0 ? 'mk' + game.facilities.library : '无'),
+    'fac-ac-display': (game.facilities.ac > 0 ? 'mk' + game.facilities.ac : '无'),
+    'fac-dorm-display': (game.facilities.fan > 0 ? 'mk' + game.facilities.fan : '无'),
+    'fac-canteen-display': (game.facilities.network > 0 ? 'mk' + game.facilities.network : '无'),
     'fac-maint-display': game.facilities.getMaintenanceCost()
   };
   for(let id in displayEls) {
@@ -674,6 +677,15 @@ function renderAll(){
     const compCard = document.getElementById('comp-only-action');
     if (compCard) compCard.remove();
   }
+  
+  // 如果需要使用繁体中文，转换所有动态生成的内容
+  try {
+    if (window.ChineseConverter && window.ChineseConverter.shouldUseTraditionalChinese()) {
+      window.ChineseConverter.convertElementToTraditional(document.body);
+    }
+  } catch (e) {
+    console.error('renderAll 繁体转换失败:', e);
+  }
 }
 
 function showModal(html){
@@ -720,6 +732,15 @@ function showModal(html){
   }
   root._modalKeyHandler = keyHandler;
   window.addEventListener('keydown', keyHandler);
+  
+  // 如果需要使用繁体中文，转换模态框内容
+  try {
+    if (window.ChineseConverter && window.ChineseConverter.shouldUseTraditionalChinese()) {
+      window.ChineseConverter.convertElementToTraditional(dialog);
+    }
+  } catch (e) {
+    console.error('showModal 繁体转换失败:', e);
+  }
 }
 
 function closeModal(){
@@ -748,7 +769,8 @@ function trainStudentsUI(){
   // 如果没有本周题目（例如游戏刚开始），则现场选择
   let tasks = game.weeklyTasks;
   if (!tasks || !Array.isArray(tasks) || tasks.length === 0) {
-    tasks = selectRandomTasks(7);
+    const extraTasks = game.facilities.getLibraryExtraTasks();
+    tasks = selectRandomTasks(7 + extraTasks);
     game.weeklyTasks = tasks;
   }
   
@@ -1109,7 +1131,7 @@ function entertainmentUI(){
         } else if(opt.id === 2){
           s.mental += uniform(8,20); var oldP = s.pressure; s.pressure = Math.max(0, s.pressure - uniform(40,55)); var newP = s.pressure;
         } else if(opt.id === 3){
-          let wf=1.0; if(game.weather==='雪') wf=2.0; else if(game.weather==='雨' && game.facilities.dorm<2) wf=0.5; var oldP = s.pressure; s.pressure = Math.max(0, s.pressure - uniform(20,35)*wf); var newP = s.pressure; s.mental += uniform(3,8);
+          let wf=1.0; if(game.weather==='雪') wf=2.0; else if(game.weather==='雨' && game.facilities.fan < 1 && game.facilities.ac < 1) wf=0.5; var oldP = s.pressure; s.pressure = Math.max(0, s.pressure - uniform(20,35)*wf); var newP = s.pressure; s.mental += uniform(3,8);
         } else if(opt.id === 5){
           s.mental += uniform(1,5); s.coding += uniform(0.5,1.0); var oldP = s.pressure; s.pressure = Math.max(0, s.pressure - uniform(10,20)); var newP = s.pressure;
         }
@@ -1184,35 +1206,7 @@ function takeVacationUI(){
   };
 }
 
-function upgradeFacilitiesUI(){
-  const facs = [{id:"computer",label:"计算机"},{id:"library",label:"资料库"},{id:"ac",label:"空调"},{id:"dorm",label:"宿舍"},{id:"canteen",label:"食堂"}];
-  let html = `<h3>升级设施</h3><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">`;
-  for(let f of facs){
-    let current = game.facilities.getCurrentLevel(f.id);
-    let max = game.facilities.getMaxLevel(f.id);
-    let cost = game.facilities.getUpgradeCost(f.id);
-    const mult = (game.getExpenseMultiplier ? game.getExpenseMultiplier() : 1);
-    const costAdj = Math.round(cost * mult);
-    html += `<div style="padding:8px;border:1px solid #eee;border-radius:6px;">
-      <div><strong>${f.label}</strong></div>
-      <div class="small">等级：${current} / ${max}</div>
-      <div class="small">升级费用：¥${costAdj}（ ¥${cost}， x${mult.toFixed(2)}）</div>
-      <div style="margin-top:8px"><button class="btn upgrade" data-fac="${f.id}">升级</button></div>
-    </div>`;
-  }
-  html += `</div><div class="modal-actions" style="margin-top:8px"><button class="btn btn-ghost" onclick="closeModal()">关闭</button></div>`;
-  showModal(html);
-  const modalUpgrades = document.querySelectorAll('#modal-root .btn.upgrade');
-  modalUpgrades.forEach(b => {
-    b.onclick = () => {
-      const fac = b.dataset.fac;
-      if(fac){
-        upgradeFacility(fac);
-        upgradeFacilitiesUI();
-      }
-    };
-  });
-}
+// upgradeFacilitiesUI 已迁移至 lib/facilities.js
 
 function initGameUI(){
   showModal(`<h3>欢迎 — OI 教练模拟器</h3>
@@ -1317,19 +1311,26 @@ function renderEndSummary(){
       return;
     }
     
-  let active = (o.students || []).filter(s => s && s.active !== false).length;
+    let active = (o.students || []).filter(s => s && s.active !== false).length;
     let initial = o.initial_students || (o.students? o.students.length : 0);
     let rep = o.reputation || 0;
     let budget = o.budget || 0;
     let totalExpenses = o.totalExpenses || 0;
     let week = o.week || 0;
+    let difficulty = o.difficulty || 2; // 默认为普通难度
+    
+    // 难度文本和颜色映射
+    const difficultyMap = {
+      1: { text: '简单', color: '#4caf50', emoji: '🟢' },
+      2: { text: '普通', color: '#2196f3', emoji: '🔵' },
+      3: { text: '专家', color: '#f44336', emoji: '🔴' }
+    };
+    const diffInfo = difficultyMap[difficulty] || difficultyMap[2];
     
     let avgP = 0; 
     if(o.students && o.students.length>0){ 
       avgP = Math.round(o.students.filter(s => s && s.active !== false).reduce((a,s)=>a+(s.pressure||0),0) / Math.max(1, active)); 
-    }
-    
-  let rawEnding = '';
+    }  let rawEnding = '';
   try{ rawEnding = sessionStorage.getItem('oi_coach_ending_reason') || sessionStorage.getItem('oi_coach_ending') || ''; }catch(e){ rawEnding = ''; }
   try{ if(!rawEnding || rawEnding.length===0) rawEnding = localStorage.getItem('oi_coach_ending_reason') || localStorage.getItem('oi_coach_ending') || ''; }catch(e){}
   let endingReason = normalizeEndingReason(rawEnding || (o.endingReason || o.oi_coach_ending_reason || '赛季结束'));
@@ -1565,6 +1566,7 @@ function renderEndSummary(){
         <div>
           <h4>📈 基本信息</h4>
           <div style="background:#f9f9f9;padding:12px;border-radius:8px">
+            <div>游戏难度: <strong style="color:${diffInfo.color}">${diffInfo.emoji} ${diffInfo.text}</strong></div>
             <div>初始人数: <strong>${initial}</strong></div>
             <div>当前在队: <strong>${active}</strong></div>
             <div>平均压力: <strong>${avgP}</strong></div>
